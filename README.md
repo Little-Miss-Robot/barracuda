@@ -24,6 +24,14 @@ npm run serve
 
 Open http://localhost:3000. Set `PORT` to use another port.
 
+The React UI uses the JSON API and leaves this server UI in place. In another terminal, from the repository root:
+
+```sh
+npm run ui
+```
+
+Open http://localhost:5173. The dev server proxies `/api` and screenshot requests to the Express server, so `npm run serve` has to be running first.
+
 From the home page, enter an `http` or `https` URL and start a run. The run page refreshes until the crawl and screenshots finish. A run can take several minutes because each page is loaded in a headless browser.
 
 On a finished run you can:
