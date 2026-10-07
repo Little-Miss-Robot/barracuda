@@ -19,7 +19,7 @@ a { color: #0c5c59; }
     justify-content: space-between;
     align-items: baseline;
     gap: 1rem;
-    padding: 1rem 1.5rem;
+    padding: .5rem 1.5rem;
     border-bottom: 1px solid #ddd4c4;
     background: #fffdf8;
 }
@@ -35,6 +35,7 @@ a { color: #0c5c59; }
 .brand {
     color: inherit;
     font-weight: 700;
+    font-size: 1.35rem;
     text-decoration: none;
     letter-spacing: -0.03em;
 }
