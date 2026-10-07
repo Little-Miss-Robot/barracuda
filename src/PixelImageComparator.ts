@@ -3,9 +3,7 @@ import pixelmatch from 'pixelmatch';
 import { PNG } from 'pngjs';
 
 export interface PixelComparisonOptions {
-    /** Per-pixel color tolerance, from 0 (strict) to 1 (lenient). */
     threshold?: number;
-    /** Count anti-aliased pixels as differences. Defaults to false. */
     includeAA?: boolean;
 }
 
