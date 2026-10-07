@@ -5,13 +5,35 @@ import {KeyValueStore} from "./contracts/KeyValueStore";
 import UrlIdGenerator from "./UrlIdGenerator";
 import {RunComparer} from "./RunComparer";
 
+export type RunStatus = 'queued' | 'running' | 'complete' | 'failed';
+
+export type PageComparison = {
+    urlId: string
+    url: string
+    status: 'unchanged' | 'changed' | 'added' | 'removed' | 'error'
+    score?: number
+    differentPixels?: number
+    message?: string
+};
+
 export type Run = {
     id: string
+    url: string
     urlId: string
     urlIds: string[]
     urls: string[]
     failures: {url: string, message: string}[]
     pending: string[]
+    status: RunStatus
+    error?: string
+    createdAt: string
+    baselineRunId?: string
+    comparisons: PageComparison[]
+};
+
+export type ListedRun = {
+    run: Run
+    approved: boolean
 };
 
 export class VisRegTester {
@@ -41,39 +63,196 @@ export class VisRegTester {
         this.runComparer = runComparer;
     }
 
-    public async run(url: string) {
+    public async run(url: string): Promise<Run> {
+        const created = await this.createRun(url);
+        return this.execute(created.id);
+    }
 
-        const runId = this.idGenerator.generate();
-        const urlId = this.urlIdGenerator.generate(url);
+    public async createRun(url: string): Promise<Run> {
+        const parsed = this.parseUrl(url);
+        const run: Run = {
+            id: this.idGenerator.generate(),
+            url: parsed.href,
+            urlId: this.urlIdGenerator.generate(parsed.href),
+            urlIds: [],
+            urls: [],
+            failures: [],
+            pending: [],
+            status: 'queued',
+            createdAt: new Date().toISOString(),
+            comparisons: [],
+        };
 
-        const result = await this.urlScraper.scrape(url);
+        await this.runStorage.set(run.id, run);
 
-        await this.screenshotter.start(result.urls, runId);
+        return run;
+    }
 
-        await this.runStorage.set(runId, {
-            id: runId,
-            urlId,
-            urlIds: result.urls.map(this.urlIdGenerator.generate),
-            urls: result.urls,
-            pending: result.pending,
-            failures: result.failures,
-        });
+    public async execute(runId: string): Promise<Run> {
+        const existing = await this.readRun(runId);
 
-        await this.idStorage.set(`${urlId}_last`, runId);
-
-        if (! await this.idStorage.has(`${urlId}_current`)) {
-            await this.idStorage.set(`${urlId}_current`, runId);
+        if (!existing) {
+            throw new Error('That run could not be found.');
         }
 
-        const approvedRunId = await this.idStorage.get(`${urlId}_current`);
+        try {
+            await this.save(existing, { status: 'running' });
 
-        if (! approvedRunId) {
-            throw new Error('No approved run was found');
+            const result = await this.urlScraper.scrape(existing.url);
+            const urlIds = result.urls.map((url) => this.urlIdGenerator.generate(url));
+
+            await this.save(existing, {
+                status: 'running',
+                urlIds,
+                urls: result.urls,
+                pending: result.pending,
+                failures: result.failures,
+            });
+
+            await this.screenshotter.start(result.urls, runId);
+            await this.idStorage.set(`${existing.urlId}_last`, runId);
+
+            if (!await this.idStorage.has(`${existing.urlId}_current`)) {
+                await this.idStorage.set(`${existing.urlId}_current`, runId);
+            }
+
+            const approvedRunId = await this.idStorage.get(`${existing.urlId}_current`);
+
+            if (!approvedRunId) {
+                throw new Error('No approved run was found');
+            }
+
+            const comparisons = await this.runComparer.compare(approvedRunId, runId);
+
+            return this.save(existing, {
+                status: 'complete',
+                urlIds,
+                urls: result.urls,
+                pending: result.pending,
+                failures: result.failures,
+                baselineRunId: approvedRunId,
+                comparisons,
+                error: undefined,
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+
+            try {
+                await this.save(existing, { status: 'failed', error: message });
+            } catch (saveError) {
+                console.error(saveError);
+            }
+
+            throw error;
+        }
+    }
+
+    public async listRuns(): Promise<ListedRun[]> {
+        const keys = await this.runStorage.keys();
+        const runs = (await Promise.all(keys.map((key) => this.readRun(key))))
+            .filter((run): run is Run => run !== undefined);
+
+        runs.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+
+        return Promise.all(runs.map(async (run) => ({
+            run,
+            approved: await this.isApproved(run),
+        })));
+    }
+
+    public async getRun(runId: string): Promise<ListedRun | undefined> {
+        let run = await this.readRun(runId);
+
+        if (!run) {
+            return undefined;
         }
 
-        await this.runComparer.compare(
-            approvedRunId,
-            runId
-        );
+        const needsComparison = run.comparisons.length === 0
+            || run.comparisons.some((comparison) => comparison.message?.includes('dimensions must match'));
+
+        if (
+            needsComparison &&
+            run.urlIds.length > 0 &&
+            run.status === 'complete'
+        ) {
+            const baselineRunId = run.baselineRunId
+                ?? await this.idStorage.get(`${run.urlId}_current`);
+
+            if (baselineRunId && await this.runStorage.has(baselineRunId)) {
+                const comparisons = await this.runComparer.compare(baselineRunId, run.id);
+                run = await this.save(run, { comparisons, baselineRunId });
+            }
+        }
+
+        return {
+            run,
+            approved: await this.isApproved(run),
+        };
+    }
+
+    public async approve(runId: string): Promise<void> {
+        const run = await this.readRun(runId);
+
+        if (!run) {
+            throw new Error('That run could not be found.');
+        }
+
+        if (run.status !== 'complete') {
+            throw new Error('Only a completed run can be approved.');
+        }
+
+        await this.idStorage.set(`${run.urlId}_current`, run.id);
+    }
+
+    private parseUrl(value: string): URL {
+        let parsed: URL;
+
+        try {
+            parsed = new URL(value);
+        } catch {
+            throw new Error('Enter a valid HTTP or HTTPS URL.');
+        }
+
+        if (!['http:', 'https:'].includes(parsed.protocol)) {
+            throw new Error('Enter a valid HTTP or HTTPS URL.');
+        }
+
+        parsed.hash = '';
+
+        return parsed;
+    }
+
+    private async isApproved(run: Run): Promise<boolean> {
+        return await this.idStorage.get(`${run.urlId}_current`) === run.id;
+    }
+
+    private async readRun(runId: string): Promise<Run | undefined> {
+        const stored = await this.runStorage.get(runId);
+
+        if (!stored) {
+            return undefined;
+        }
+
+        return {
+            id: stored.id,
+            url: stored.url ?? stored.urls?.[0] ?? stored.urlId,
+            urlId: stored.urlId,
+            urlIds: stored.urlIds ?? [],
+            urls: stored.urls ?? [],
+            failures: stored.failures ?? [],
+            pending: stored.pending ?? [],
+            status: stored.status ?? 'complete',
+            error: stored.error,
+            createdAt: stored.createdAt ?? '',
+            baselineRunId: stored.baselineRunId,
+            comparisons: stored.comparisons ?? [],
+        };
+    }
+
+    private async save(base: Run, patch: Partial<Run>): Promise<Run> {
+        const latest = await this.readRun(base.id);
+        const next: Run = { ...(latest ?? base), ...patch };
+        await this.runStorage.set(base.id, next);
+        return next;
     }
 }

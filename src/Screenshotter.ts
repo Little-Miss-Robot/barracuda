@@ -1,5 +1,5 @@
 import {Filesystem} from "@littlemissrobot/highfive";
-import {chromium} from "playwright";
+import {chromium, type Page} from "playwright";
 import UrlIdGenerator from "./UrlIdGenerator";
 
 export default class Screenshotter {
@@ -33,12 +33,9 @@ export default class Screenshotter {
                         waitUntil: 'load',
                         timeout: 30_000,
                     });
-
-                    // Wait for web fonts to finish loading.
                     await page.evaluate(() => document.fonts.ready);
-
+                    await this.settle(page);
                     const path = `runs/run-${runId}/${this.urlIdGenerator.generate(url)}.png`;
-
                     const screenshot = await page.screenshot({
                         fullPage: true,
                         animations: 'disabled',
@@ -60,5 +57,42 @@ export default class Screenshotter {
         } finally {
             await browser.close();
         }
+    }
+
+    private async settle(page: Page): Promise<void> {
+        await page.evaluate(`
+        (async () => {
+            const wait = (durationMs) => new Promise((resolve) => {
+                setTimeout(resolve, durationMs);
+            });
+
+            const step = window.innerHeight;
+            let y = 0;
+
+            while (y < document.documentElement.scrollHeight) {
+                window.scrollTo(0, y);
+                y += step;
+                await wait(100);
+            }
+
+            window.scrollTo(0, 0);
+
+            await Promise.all(
+                Array.from(document.images).map(async (image) => {
+                    image.loading = 'eager';
+
+                    if (image.complete && image.naturalWidth > 0) {
+                        return;
+                    }
+
+                    try {
+                        await image.decode();
+                    } catch {
+                        // A broken image should not abort the screenshot.
+                    }
+                })
+            );
+        })()
+    `);
     }
 }

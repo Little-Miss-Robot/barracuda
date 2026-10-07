@@ -1,8 +1,9 @@
-import { access, mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, readdir, rename, unlink, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import type { Filesystem } from '@littlemissrobot/highfive';
+import {ListingFilesystem} from "./contracts/ListingFilesystem";
 
-export class LocalFilesystem implements Filesystem {
+export class LocalFilesystem implements Filesystem, ListingFilesystem {
 
     private readonly root: string;
 
@@ -15,8 +16,27 @@ export class LocalFilesystem implements Filesystem {
     }
 
     public async write(path: string, contents: Uint8Array): Promise<void> {
-        await mkdir(dirname(`${this.root}/${path}`), { recursive: true });
-        await writeFile(`${this.root}/${path}`, contents);
+        const target = `${this.root}/${path}`;
+        await mkdir(dirname(target), { recursive: true });
+        const temporary = `${target}.${process.pid}.tmp`;
+        await writeFile(temporary, contents);
+        await rename(temporary, target);
+    }
+
+    public async list(path: string): Promise<string[]> {
+        try {
+            return await readdir(`${this.root}/${path}`);
+        } catch (error) {
+            if (
+                error instanceof Error &&
+                'code' in error &&
+                error.code === 'ENOENT'
+            ) {
+                return [];
+            }
+
+            throw error;
+        }
     }
 
     public async delete(path: string): Promise<void> {

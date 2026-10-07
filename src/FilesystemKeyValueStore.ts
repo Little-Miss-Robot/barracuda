@@ -1,12 +1,13 @@
-import type { Filesystem } from '@littlemissrobot/highfive';
 import type { KeyValueStore } from './contracts/KeyValueStore';
+import {Filesystem} from "@littlemissrobot/highfive";
+import {ListingFilesystem} from "./contracts/ListingFilesystem";
 
 export class FilesystemKeyValueStore<Value = unknown> implements KeyValueStore<Value> {
 
-    private readonly filesystem: Filesystem;
+    private readonly filesystem: Filesystem & ListingFilesystem;
     private readonly directory: string
 
-    constructor(filesystem: Filesystem, directory: string) {
+    constructor(filesystem: Filesystem & ListingFilesystem, directory: string) {
         this.filesystem = filesystem;
         this.directory = directory;
     }
@@ -47,6 +48,14 @@ export class FilesystemKeyValueStore<Value = unknown> implements KeyValueStore<V
 
     public async has(key: string): Promise<boolean> {
         return this.filesystem.exists(this.pathFor(key));
+    }
+
+    public async keys(): Promise<string[]> {
+        const names = await this.filesystem.list(this.directory);
+
+        return names
+            .filter((name) => name.endsWith('.json'))
+            .map((name) => decodeURIComponent(name.slice(0, -'.json'.length)));
     }
 
     private pathFor(key: string): string {

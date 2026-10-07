@@ -1,6 +1,5 @@
 import {
-    DefaultContainer,
-    Filesystem,
+    DefaultContainer, Filesystem,
     identifiersProvider,
 } from "@littlemissrobot/highfive";
 import Screenshotter from "./Screenshotter";
@@ -12,9 +11,10 @@ import {FilesystemKeyValueStore} from "./FilesystemKeyValueStore";
 import UrlIdGenerator from "./UrlIdGenerator";
 import {RunComparer} from "./RunComparer";
 import {PixelImageComparator} from "./PixelImageComparator";
+import {ListingFilesystem} from "./contracts/ListingFilesystem";
 
 const container = new DefaultContainer<{
-    filesystem: () => Filesystem,
+    filesystem: () => Filesystem & ListingFilesystem,
     runStorage: () => KeyValueStore<Run>,
     idStorage: () => KeyValueStore<string>,
     urlIdGenerator: () => UrlIdGenerator,
@@ -47,7 +47,7 @@ const container = new DefaultContainer<{
     })
     .bind('urlScraper', () => {
         return new UrlScraper({
-            maxPages: 10
+            maxPages: 100
         });
     })
     .singleton('runComparer', () => {
