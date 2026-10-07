@@ -1,6 +1,7 @@
 import path from 'node:path';
 import express, { type ErrorRequestHandler, type Express, type Request, type Response } from 'express';
 import type { VisRegTester } from '../VisRegTester';
+import { createApiRouter } from './api';
 import { renderHome, renderMessage, renderRun } from './pages';
 import {Filesystem} from "@littlemissrobot/highfive";
 import {ListingFilesystem} from "../contracts/ListingFilesystem";
@@ -107,6 +108,8 @@ export function createApp(dependencies: AppDependencies): Express {
             'diffs',
         );
     }));
+
+    app.use('/api', createApiRouter(tester));
 
     app.use((_request, response) => {
         response.status(404).type('html').send(renderMessage('Not found', 'That page does not exist.'));
