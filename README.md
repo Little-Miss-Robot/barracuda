@@ -13,6 +13,7 @@ Install dependencies and the browser:
 ```sh
 npm install
 npx playwright install chromium
+cd ui && npm install
 ```
 
 Captured runs are written to `storage/`, which is gitignored.
