@@ -4,17 +4,20 @@ import type { VisRegTester } from '../VisRegTester';
 import { createApiRouter } from './api';
 import {Filesystem} from "@littlemissrobot/highfive";
 import {ListingFilesystem} from "../contracts/ListingFilesystem";
+import type { Projects, Resolution } from '../Project';
+import { screenshotCandidates } from '../screenshots';
 
 const runIdPattern = /^[a-zA-Z0-9_-]{1,80}$/;
 const urlIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 type AppDependencies = {
     tester: VisRegTester;
+    projects: Projects;
     filesystem: Filesystem & ListingFilesystem;
 };
 
 export function createApp(dependencies: AppDependencies): Express {
-    const { tester, filesystem } = dependencies;
+    const { tester, projects, filesystem } = dependencies;
     const app = express();
 
     app.use(express.urlencoded({ extended: false }));
@@ -27,6 +30,7 @@ export function createApp(dependencies: AppDependencies): Express {
             routeParam(request.params.runId),
             routeParam(request.params.urlId),
             'images',
+            requestedResolution(request),
         );
     }));
 
@@ -37,10 +41,11 @@ export function createApp(dependencies: AppDependencies): Express {
             routeParam(request.params.runId),
             routeParam(request.params.urlId),
             'diffs',
+            requestedResolution(request),
         );
     }));
 
-    app.use('/api', createApiRouter(tester));
+    app.use('/api', createApiRouter(tester, projects));
 
     app.use((_request, response) => {
         response.status(404).type('html').send('That page does not exist.');
@@ -67,23 +72,44 @@ async function sendImage(
     runId: string,
     urlId: string,
     kind: 'images' | 'diffs',
+    resolution: Resolution | undefined | 'invalid',
 ): Promise<void> {
-    if (!runIdPattern.test(runId) || !urlIdPattern.test(urlId)) {
+    if (!runIdPattern.test(runId) || !urlIdPattern.test(urlId) || resolution === 'invalid') {
         response.status(404).type('text/plain').send('Image not found.');
         return;
     }
 
-    const path = kind === 'images'
-        ? `runs/run-${runId}/${urlId}.png`
-        : `diffs/${runId}/diff-${urlId}.png`;
+    let path: string | undefined;
 
-    if (!await filesystem.exists(path)) {
+    for (const candidate of screenshotCandidates(runId, urlId, resolution, kind)) {
+        if (await filesystem.exists(candidate)) {
+            path = candidate;
+            break;
+        }
+    }
+
+    if (!path) {
         response.status(404).type('text/plain').send('Image not found.');
         return;
     }
 
     const bytes = await filesystem.read(path);
     response.type('png').send(Buffer.from(bytes));
+}
+
+function requestedResolution(request: Request): Resolution | undefined | 'invalid' {
+    if (request.query.width === undefined && request.query.height === undefined) {
+        return undefined;
+    }
+
+    const width = Number(request.query.width);
+    const height = Number(request.query.height);
+
+    if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 || width > 8192 || height > 8192) {
+        return 'invalid';
+    }
+
+    return { width, height };
 }
 
 function routeParam(value: string | string[] | undefined): string {

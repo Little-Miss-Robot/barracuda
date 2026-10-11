@@ -5,6 +5,7 @@ import {
 import Screenshotter from "./Screenshotter";
 import {LocalFilesystem} from "./LocalFilesystem";
 import {UrlScraper} from "./UrlScraper";
+import {Project, Projects} from "./Project";
 import {Run, VisRegTester} from "./VisRegTester";
 import {KeyValueStore} from "./contracts/KeyValueStore";
 import {FilesystemKeyValueStore} from "./FilesystemKeyValueStore";
@@ -16,6 +17,8 @@ import {ListingFilesystem} from "./contracts/ListingFilesystem";
 const container = new DefaultContainer<{
     filesystem: () => Filesystem & ListingFilesystem,
     runStorage: () => KeyValueStore<Run>,
+    projectStorage: () => KeyValueStore<Project>,
+    projects: () => Projects,
     idStorage: () => KeyValueStore<string>,
     urlIdGenerator: () => UrlIdGenerator,
     tester: () => VisRegTester,
@@ -45,6 +48,20 @@ const container = new DefaultContainer<{
             container.make('filesystem'), 'run-data'
         );
     })
+    .singleton('projectStorage', () => {
+        return new FilesystemKeyValueStore<Project>(
+            container.make('filesystem'), 'projects'
+        );
+    })
+    .singleton('projects', () => {
+        return new Projects(
+            container.make('projectStorage'),
+            container.make('runStorage'),
+            container.make('idStorage'),
+            container.make('filesystem'),
+            container.make('urlIdGenerator'),
+        );
+    })
     .bind('urlScraper', () => {
         return new UrlScraper({
             maxPages: 100
@@ -71,7 +88,8 @@ const container = new DefaultContainer<{
             container.make('screenshotter'),
             container.make('runStorage'),
             container.make('idStorage'),
-            container.make('runComparer')
+            container.make('runComparer'),
+            container.make('projects'),
         );
     });
 

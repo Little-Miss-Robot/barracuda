@@ -6,7 +6,7 @@ const api = 'http://localhost:3000';
 export default defineConfig({
     plugins: [react()],
     server: {
-        port: 5173,
+        port: 5174,
         proxy: {
             '/api': api,
             '^/runs/[^/]+/(images|diffs)/': api,

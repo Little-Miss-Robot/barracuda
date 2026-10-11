@@ -1,4 +1,4 @@
-import type { ComparisonStatus, PageComparison, Run, RunStatus } from './types';
+import type { ComparisonStatus, PageComparison, Resolution, Run, RunStatus } from './types';
 
 const statusLabel: Record<RunStatus | ComparisonStatus | 'approved', string> = {
     queued: 'Queued',
@@ -20,6 +20,10 @@ const comparisonRank: Record<ComparisonStatus, number> = {
     error: 3,
     unchanged: 4,
 };
+
+export function formatResolution(resolution: Resolution): string {
+    return `${resolution.width}×${resolution.height}`;
+}
 
 export function label(status: RunStatus | ComparisonStatus | 'approved'): string {
     return statusLabel[status];
@@ -55,7 +59,22 @@ export function changeCount(run: Run): number | null {
 }
 
 export function sortComparisons(comparisons: PageComparison[]): PageComparison[] {
-    return [...comparisons].sort((left, right) => comparisonRank[left.status] - comparisonRank[right.status]);
+    return [...comparisons].sort((left, right) => {
+        const byStatus = comparisonRank[left.status] - comparisonRank[right.status];
+
+        if (byStatus !== 0) {
+            return byStatus;
+        }
+
+        const byUrl = left.url.localeCompare(right.url);
+
+        if (byUrl !== 0) {
+            return byUrl;
+        }
+
+        return (left.resolution?.width ?? 0) - (right.resolution?.width ?? 0)
+            || (left.resolution?.height ?? 0) - (right.resolution?.height ?? 0);
+    });
 }
 
 export function comparisonSummary(comparisons: PageComparison[]): string {
@@ -68,6 +87,22 @@ export function comparisonSummary(comparisons: PageComparison[]): string {
     return [...counts.entries()].map(([status, count]) => `${count} ${status}`).join(', ') + '.';
 }
 
-export function imagePath(runId: string, urlId: string, kind: 'images' | 'diffs'): string {
-    return `/runs/${encodeURIComponent(runId)}/${kind}/${encodeURIComponent(urlId)}`;
+export function imagePath(
+    runId: string,
+    urlId: string,
+    kind: 'images' | 'diffs',
+    resolution?: Resolution,
+): string {
+    const path = `/runs/${encodeURIComponent(runId)}/${kind}/${encodeURIComponent(urlId)}`;
+
+    if (!resolution) {
+        return path;
+    }
+
+    const params = new URLSearchParams({
+        width: String(resolution.width),
+        height: String(resolution.height),
+    });
+
+    return `${path}?${params}`;
 }

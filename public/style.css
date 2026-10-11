@@ -72,8 +72,11 @@ label { display: block; font-size: 0.9rem; margin-bottom: 0.35rem; }
     gap: 0.6rem;
 }
 
-input[type="url"] {
-    flex: 1;
+input[type="url"],
+input[type="text"],
+input[type="number"],
+textarea {
+    width: 100%;
     min-width: 0;
     padding: 0.65rem 0.75rem;
     border: 1px solid #cbbfaa;
@@ -81,6 +84,42 @@ input[type="url"] {
     background: white;
     font: inherit;
 }
+
+.form-row input[type="url"],
+.form-row input[type="text"] {
+    width: auto;
+    flex: 1;
+}
+
+.form-row input[type="url"] { flex: 2; }
+
+textarea { min-height: 6rem; resize: vertical; }
+
+.stack-form { display: grid; gap: 1rem; margin-top: 1rem; }
+
+fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+
+legend { margin-bottom: 0.35rem; }
+
+.resolution-row,
+.url-row,
+.inline-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.resolution-row,
+.url-row { margin-bottom: 0.5rem; }
+
+.resolution-row input[type="number"] { width: 7rem; }
+
+.url-row input[type="url"] { flex: 1; width: auto; }
 
 button {
     padding: 0.65rem 0.9rem;
@@ -96,6 +135,16 @@ button[aria-pressed="false"] {
     background: transparent;
     color: #1c1915;
 }
+
+button.quiet {
+    background: white;
+    color: #1c1915;
+    border: 1px solid #cbbfaa;
+}
+
+button.danger { background: #8d3328; }
+
+button:disabled { opacity: 0.55; cursor: default; }
 
 .view-toggle {
     display: flex;

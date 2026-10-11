@@ -1,9 +1,11 @@
 import express, { type ErrorRequestHandler, type Request, type Response, type Router } from 'express';
+import { ProjectError, type Projects } from '../Project';
 import type { VisRegTester } from '../VisRegTester';
 
 const runIdPattern = /^[a-zA-Z0-9_-]{1,80}$/;
+const urlIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-export function createApiRouter(tester: VisRegTester): Router {
+export function createApiRouter(tester: VisRegTester, projects: Projects): Router {
     const router = express.Router();
 
     router.use(express.json());
@@ -44,6 +46,77 @@ export function createApiRouter(tester: VisRegTester): Router {
         }
 
         response.json(details);
+    }));
+
+    router.get('/projects', asyncHandler(async (_request, response) => {
+        response.json(await projects.list());
+    }));
+
+    router.post('/projects', asyncHandler(async (request, response) => {
+        try {
+            const project = await projects.create({
+                url: request.body?.url,
+                name: request.body?.name,
+                resolutions: request.body?.resolutions,
+                extraUrls: request.body?.extraUrls,
+            });
+            response.status(201).json(project);
+        } catch (error) {
+            sendProjectError(error, response);
+        }
+    }));
+
+    router.get('/projects/:urlId', asyncHandler(async (request, response) => {
+        const urlId = routeParam(request.params.urlId);
+
+        if (!urlIdPattern.test(urlId)) {
+            response.status(404).json({ error: 'That project could not be found.' });
+            return;
+        }
+
+        const project = await projects.get(urlId);
+
+        if (!project) {
+            response.status(404).json({ error: 'That project could not be found.' });
+            return;
+        }
+
+        response.json(project);
+    }));
+
+    router.patch('/projects/:urlId', asyncHandler(async (request, response) => {
+        const urlId = routeParam(request.params.urlId);
+
+        if (!urlIdPattern.test(urlId)) {
+            response.status(404).json({ error: 'That project could not be found.' });
+            return;
+        }
+
+        try {
+            response.json(await projects.update(urlId, {
+                name: request.body?.name,
+                resolutions: request.body?.resolutions,
+                extraUrls: request.body?.extraUrls,
+            }));
+        } catch (error) {
+            sendProjectError(error, response);
+        }
+    }));
+
+    router.delete('/projects/:urlId', asyncHandler(async (request, response) => {
+        const urlId = routeParam(request.params.urlId);
+
+        if (!urlIdPattern.test(urlId)) {
+            response.status(404).json({ error: 'That project could not be found.' });
+            return;
+        }
+
+        try {
+            await projects.delete(urlId);
+            response.status(204).end();
+        } catch (error) {
+            sendProjectError(error, response);
+        }
     }));
 
     router.post('/runs/:runId/approve', asyncHandler(async (request, response) => {
@@ -100,6 +173,15 @@ export function createApiRouter(tester: VisRegTester): Router {
     router.use(handleError);
 
     return router;
+}
+
+function sendProjectError(error: unknown, response: Response): void {
+    if (error instanceof ProjectError) {
+        response.status(error.status).json({ error: error.message });
+        return;
+    }
+
+    throw error;
 }
 
 function isJsonParseError(error: unknown): boolean {

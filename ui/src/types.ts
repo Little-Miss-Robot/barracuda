@@ -2,9 +2,15 @@ export type RunStatus = 'queued' | 'running' | 'complete' | 'failed';
 
 export type ComparisonStatus = 'unchanged' | 'changed' | 'added' | 'removed' | 'error';
 
+export type Resolution = {
+    width: number;
+    height: number;
+};
+
 export type PageComparison = {
     urlId: string;
     url: string;
+    resolution?: Resolution;
     status: ComparisonStatus;
     score?: number;
     differentPixels?: number;
@@ -17,6 +23,7 @@ export type Run = {
     urlId: string;
     urlIds: string[];
     urls: string[];
+    resolutions?: Resolution[];
     failures: { url: string; message: string }[];
     pending: string[];
     status: RunStatus;
@@ -29,4 +36,12 @@ export type Run = {
 export type ListedRun = {
     run: Run;
     approved: boolean;
+};
+
+export type Project = {
+    urlId: string;
+    url: string;
+    name: string;
+    resolutions: Resolution[];
+    extraUrls: string[];
 };

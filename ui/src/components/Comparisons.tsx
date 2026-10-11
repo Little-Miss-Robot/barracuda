@@ -33,7 +33,11 @@ export function Comparisons({ run }: { run: Run }) {
             </div>
             <p className="lede">{comparisonSummary(ordered)} Red marks changed pixels. The overlay slider fades this run over the baseline.</p>
             {ordered.map((comparison) => (
-                <Comparison key={comparison.urlId} run={run} comparison={comparison} />
+                <Comparison
+                    key={`${comparison.urlId}-${comparison.resolution?.width ?? 0}x${comparison.resolution?.height ?? 0}`}
+                    run={run}
+                    comparison={comparison}
+                />
             ))}
         </section>
     );
@@ -48,7 +52,10 @@ function Comparison({ run, comparison }: { run: Run; comparison: PageComparison 
         <article className="comparison">
             <header>
                 <h3><a href={comparison.url} target="_blank" rel="noreferrer">{comparison.url}</a></h3>
-                <p className="meta"><span className={`status status-${comparison.status}`}>{label(comparison.status)}</span></p>
+                <p className="meta">
+                    <span className={`status status-${comparison.status}`}>{label(comparison.status)}</span>
+                    {comparison.resolution ? <> {comparison.resolution.width}×{comparison.resolution.height}</> : null}
+                </p>
                 {score ? <p className="score">{score}</p> : null}
                 {comparison.message ? <p className="banner">{comparison.message}</p> : null}
             </header>
@@ -58,9 +65,9 @@ function Comparison({ run, comparison }: { run: Run; comparison: PageComparison 
 }
 
 function Frames({ run, comparison }: { run: Run; comparison: PageComparison }) {
-    const current = imagePath(run.id, comparison.urlId, 'images');
-    const baseline = run.baselineRunId ? imagePath(run.baselineRunId, comparison.urlId, 'images') : '';
-    const diff = imagePath(run.id, comparison.urlId, 'diffs');
+    const current = imagePath(run.id, comparison.urlId, 'images', comparison.resolution);
+    const baseline = run.baselineRunId ? imagePath(run.baselineRunId, comparison.urlId, 'images', comparison.resolution) : '';
+    const diff = imagePath(run.id, comparison.urlId, 'diffs', comparison.resolution);
 
     if (comparison.status === 'added') {
         return (

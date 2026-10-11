@@ -1,4 +1,4 @@
-import { access, mkdir, readFile, readdir, rename, unlink, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, readdir, rename, rm, unlink, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import type { Filesystem } from '@littlemissrobot/highfive';
 import {ListingFilesystem} from "./contracts/ListingFilesystem";
@@ -41,6 +41,10 @@ export class LocalFilesystem implements Filesystem, ListingFilesystem {
 
     public async delete(path: string): Promise<void> {
         await unlink(`${this.root}/${path}`);
+    }
+
+    public async remove(path: string): Promise<void> {
+        await rm(`${this.root}/${path}`, { recursive: true, force: true });
     }
 
     public async exists(path: string): Promise<boolean> {

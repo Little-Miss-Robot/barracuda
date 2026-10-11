@@ -1,5 +1,6 @@
 import { Link, Route, Routes } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
+import { ProjectPage } from './pages/ProjectPage';
 import { RunPage } from './pages/RunPage';
 import Header from "./components/Header";
 
@@ -10,6 +11,7 @@ export function App() {
             <main>
                 <Routes>
                     <Route path="/" element={<HomePage />} />
+                    <Route path="/projects/:urlId" element={<ProjectPage />} />
                     <Route path="/runs/:runId" element={<RunPage />} />
                     <Route path="*" element={<NotFound />} />
                 </Routes>
@@ -21,7 +23,7 @@ export function App() {
 function NotFound() {
     return (
         <>
-            <p className="crumb"><Link to="/">All runs</Link></p>
+            <p className="crumb"><Link to="/">Projects</Link></p>
             <h1>Not found</h1>
             <p className="lede">That page does not exist.</p>
         </>

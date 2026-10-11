@@ -5,6 +5,7 @@ const port = Number(process.env.PORT ?? 3000);
 
 const app = createApp({
     tester: container.make('tester'),
+    projects: container.make('projects'),
     filesystem: container.make('filesystem'),
 });
 

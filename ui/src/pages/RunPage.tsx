@@ -76,7 +76,7 @@ export function RunPage() {
     if (missing) {
         return (
             <>
-                <p className="crumb"><Link to="/">All runs</Link></p>
+                <p className="crumb"><Link to="/">Projects</Link></p>
                 <h1>Not found</h1>
                 <p className="lede">That run could not be found.</p>
             </>
@@ -107,7 +107,11 @@ export function RunPage() {
 
     return (
         <>
-            <p className="crumb"><Link to="/">All runs</Link></p>
+            <p className="crumb">
+                <Link to="/">Projects</Link>
+                {' / '}
+                <Link to={`/projects/${run.urlId}`}>{run.url}</Link>
+            </p>
             <header className="run-header">
                 <div>
                     <h1><a href={run.url} target="_blank" rel="noreferrer">{run.url}</a></h1>

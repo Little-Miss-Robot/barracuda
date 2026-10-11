@@ -1,5 +1,7 @@
 import {Filesystem} from "@littlemissrobot/highfive";
 import {chromium, type Page} from "playwright";
+import type {Resolution} from "./Project";
+import {screenshotPath} from "./screenshots";
 import UrlIdGenerator from "./UrlIdGenerator";
 
 export default class Screenshotter {
@@ -15,43 +17,49 @@ export default class Screenshotter {
         this.filesystem = filesystem;
     }
 
-    public async start(urls: string[], runId: string) {
+    public async start(urls: string[], runId: string, resolutions: Resolution[]) {
 
         const browser = await chromium.launch({ headless: true });
 
         try {
-            const context = await browser.newContext({
-                viewport: { width: 1440, height: 900 },
-                deviceScaleFactor: 1,
-            });
-
-            for (const url of urls) {
-                const page = await context.newPage();
+            for (const resolution of resolutions) {
+                const context = await browser.newContext({
+                    viewport: { width: resolution.width, height: resolution.height },
+                    deviceScaleFactor: 1,
+                });
 
                 try {
-                    await page.goto(url, {
-                        waitUntil: 'load',
-                        timeout: 30_000,
-                    });
-                    await page.evaluate(() => document.fonts.ready);
-                    await this.settle(page);
-                    const path = `runs/run-${runId}/${this.urlIdGenerator.generate(url)}.png`;
-                    const screenshot = await page.screenshot({
-                        fullPage: true,
-                        animations: 'disabled',
-                    });
+                    for (const url of urls) {
+                        const page = await context.newPage();
 
-                    await this.filesystem.write(path, screenshot);
+                        try {
+                            await page.goto(url, {
+                                waitUntil: 'load',
+                                timeout: 30_000,
+                            });
+                            await page.evaluate(() => document.fonts.ready);
+                            await this.settle(page);
+                            const path = screenshotPath(runId, this.urlIdGenerator.generate(url), resolution);
+                            const screenshot = await page.screenshot({
+                                fullPage: true,
+                                animations: 'disabled',
+                            });
 
-                    console.log(`Saved ${url} → ${path}`);
+                            await this.filesystem.write(path, screenshot);
 
-                } catch (error) {
+                            console.log(`Saved ${url} at ${resolution.width}x${resolution.height} → ${path}`);
 
-                    console.error(`Failed to capture ${url}:`, error);
+                        } catch (error) {
 
+                            console.error(`Failed to capture ${url}:`, error);
+
+                        } finally {
+
+                            await page.close();
+                        }
+                    }
                 } finally {
-
-                    await page.close();
+                    await context.close();
                 }
             }
         } finally {

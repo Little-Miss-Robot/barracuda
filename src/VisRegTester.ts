@@ -4,12 +4,14 @@ import {UrlScraper} from "./UrlScraper";
 import {KeyValueStore} from "./contracts/KeyValueStore";
 import UrlIdGenerator from "./UrlIdGenerator";
 import {RunComparer} from "./RunComparer";
+import {mergeUrls, resolutionsOf, type Projects, type Resolution} from "./Project";
 
 export type RunStatus = 'queued' | 'running' | 'complete' | 'failed';
 
 export type PageComparison = {
     urlId: string
     url: string
+    resolution?: Resolution
     status: 'unchanged' | 'changed' | 'added' | 'removed' | 'error'
     score?: number
     differentPixels?: number
@@ -22,6 +24,7 @@ export type Run = {
     urlId: string
     urlIds: string[]
     urls: string[]
+    resolutions: Resolution[]
     failures: {url: string, message: string}[]
     pending: string[]
     status: RunStatus
@@ -44,6 +47,7 @@ export class VisRegTester {
     private runStorage: KeyValueStore<Run>;
     private idStorage: KeyValueStore<string>;
     private runComparer: RunComparer;
+    private projects: Projects;
 
     constructor(
         idGenerator: IdGenerator,
@@ -52,7 +56,8 @@ export class VisRegTester {
         screenshotter: Screenshotter,
         runStorage: KeyValueStore<Run>,
         idStorage: KeyValueStore<string>,
-        runComparer: RunComparer
+        runComparer: RunComparer,
+        projects: Projects,
     ) {
         this.idGenerator = idGenerator;
         this.urlIdGenerator = urlIdGenerator;
@@ -61,6 +66,7 @@ export class VisRegTester {
         this.runStorage = runStorage;
         this.idStorage = idStorage;
         this.runComparer = runComparer;
+        this.projects = projects;
     }
 
     public async run(url: string): Promise<Run> {
@@ -70,12 +76,14 @@ export class VisRegTester {
 
     public async createRun(url: string): Promise<Run> {
         const parsed = this.parseUrl(url);
+        await this.projects.ensure(parsed.href);
         const run: Run = {
             id: this.idGenerator.generate(),
             url: parsed.href,
             urlId: this.urlIdGenerator.generate(parsed.href),
             urlIds: [],
             urls: [],
+            resolutions: [],
             failures: [],
             pending: [],
             status: 'queued',
@@ -98,18 +106,22 @@ export class VisRegTester {
         try {
             await this.save(existing, { status: 'running' });
 
+            const project = await this.projects.ensure(existing.url);
+            const resolutions = resolutionsOf(project.resolutions);
             const result = await this.urlScraper.scrape(existing.url);
-            const urlIds = result.urls.map((url) => this.urlIdGenerator.generate(url));
+            const urls = mergeUrls(result.urls, project.extraUrls);
+            const urlIds = urls.map((url) => this.urlIdGenerator.generate(url));
 
             await this.save(existing, {
                 status: 'running',
                 urlIds,
-                urls: result.urls,
+                urls,
+                resolutions,
                 pending: result.pending,
                 failures: result.failures,
             });
 
-            await this.screenshotter.start(result.urls, runId);
+            await this.screenshotter.start(urls, runId, resolutions);
             await this.idStorage.set(`${existing.urlId}_last`, runId);
 
             if (!await this.idStorage.has(`${existing.urlId}_current`)) {
@@ -127,7 +139,8 @@ export class VisRegTester {
             return this.save(existing, {
                 status: 'complete',
                 urlIds,
-                urls: result.urls,
+                urls,
+                resolutions,
                 pending: result.pending,
                 failures: result.failures,
                 baselineRunId: approvedRunId,
@@ -239,6 +252,7 @@ export class VisRegTester {
             urlId: stored.urlId,
             urlIds: stored.urlIds ?? [],
             urls: stored.urls ?? [],
+            resolutions: stored.resolutions ?? [],
             failures: stored.failures ?? [],
             pending: stored.pending ?? [],
             status: stored.status ?? 'complete',
