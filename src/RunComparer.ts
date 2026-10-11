@@ -1,9 +1,11 @@
 import {Filesystem} from "@littlemissrobot/highfive";
 import {KeyValueStore} from "./contracts/KeyValueStore";
 import {PixelImageComparator} from "./PixelImageComparator";
-import {resolutionsOf, type Resolution} from "./Project";
-import {diffPath, screenshotCandidates} from "./screenshots";
-import {PageComparison, Run} from "./VisRegTester";
+import {resolutionsOf} from "./utils/projects";
+import {diffPath, screenshotCandidates} from "./utils/screenshots";
+import {Run} from "./entities/Run";
+import {Shot} from "./entities/Shot";
+import {PageComparison} from "./entities/PageComparison";
 
 export class RunComparer {
 
@@ -122,12 +124,6 @@ export class RunComparer {
         return undefined;
     }
 }
-
-type Shot = {
-    urlId: string;
-    url: string;
-    resolution: Resolution;
-};
 
 function shotsFor(run: Run): Map<string, Shot> {
     const shots = new Map<string, Shot>();

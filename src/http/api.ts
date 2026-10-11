@@ -1,11 +1,12 @@
 import express, { type ErrorRequestHandler, type Request, type Response, type Router } from 'express';
-import { ProjectError, type Projects } from '../Project';
 import type { VisRegTester } from '../VisRegTester';
+import {ProjectRepository} from "../ProjectRepository";
+import {ProjectError} from "../errors/ProjectError";
 
 const runIdPattern = /^[a-zA-Z0-9_-]{1,80}$/;
 const urlIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-export function createApiRouter(tester: VisRegTester, projects: Projects): Router {
+export function createApiRouter(tester: VisRegTester, projects: ProjectRepository): Router {
     const router = express.Router();
 
     router.use(express.json());

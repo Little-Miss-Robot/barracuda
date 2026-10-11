@@ -1,8 +1,8 @@
 import {Filesystem} from "@littlemissrobot/highfive";
 import {chromium, type Page} from "playwright";
-import type {Resolution} from "./Project";
-import {screenshotPath} from "./screenshots";
+import {screenshotPath} from "./utils/screenshots";
 import UrlIdGenerator from "./UrlIdGenerator";
+import {Resolution} from "./entities/Resolution";
 
 export default class Screenshotter {
 

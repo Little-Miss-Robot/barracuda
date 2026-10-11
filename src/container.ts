@@ -5,20 +5,22 @@ import {
 import Screenshotter from "./Screenshotter";
 import {LocalFilesystem} from "./LocalFilesystem";
 import {UrlScraper} from "./UrlScraper";
-import {Project, Projects} from "./Project";
-import {Run, VisRegTester} from "./VisRegTester";
+import {VisRegTester} from "./VisRegTester";
 import {KeyValueStore} from "./contracts/KeyValueStore";
 import {FilesystemKeyValueStore} from "./FilesystemKeyValueStore";
 import UrlIdGenerator from "./UrlIdGenerator";
 import {RunComparer} from "./RunComparer";
 import {PixelImageComparator} from "./PixelImageComparator";
 import {ListingFilesystem} from "./contracts/ListingFilesystem";
+import {Project} from "./entities/Project";
+import {ProjectRepository} from "./ProjectRepository";
+import {Run} from "./entities/Run";
 
 const container = new DefaultContainer<{
     filesystem: () => Filesystem & ListingFilesystem,
     runStorage: () => KeyValueStore<Run>,
     projectStorage: () => KeyValueStore<Project>,
-    projects: () => Projects,
+    projects: () => ProjectRepository,
     idStorage: () => KeyValueStore<string>,
     urlIdGenerator: () => UrlIdGenerator,
     tester: () => VisRegTester,
@@ -54,7 +56,7 @@ const container = new DefaultContainer<{
         );
     })
     .singleton('projects', () => {
-        return new Projects(
+        return new ProjectRepository(
             container.make('projectStorage'),
             container.make('runStorage'),
             container.make('idStorage'),

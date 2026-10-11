@@ -1,4 +1,4 @@
-import type { Resolution } from './Project';
+import {Resolution} from "../entities/Resolution";
 
 const DEFAULT_WIDTH = 1440;
 const DEFAULT_HEIGHT = 900;

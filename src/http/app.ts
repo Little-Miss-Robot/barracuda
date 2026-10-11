@@ -4,15 +4,16 @@ import type { VisRegTester } from '../VisRegTester';
 import { createApiRouter } from './api';
 import {Filesystem} from "@littlemissrobot/highfive";
 import {ListingFilesystem} from "../contracts/ListingFilesystem";
-import type { Projects, Resolution } from '../Project';
-import { screenshotCandidates } from '../screenshots';
+import {ProjectRepository} from "../ProjectRepository";
+import {Resolution} from "../entities/Resolution";
+import {screenshotCandidates} from "../utils/screenshots";
 
 const runIdPattern = /^[a-zA-Z0-9_-]{1,80}$/;
 const urlIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 type AppDependencies = {
     tester: VisRegTester;
-    projects: Projects;
+    projects: ProjectRepository;
     filesystem: Filesystem & ListingFilesystem;
 };
 
