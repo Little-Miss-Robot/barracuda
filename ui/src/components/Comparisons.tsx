@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { comparisonSummary, imagePath, label, sortComparisons } from '../format';
-import type { PageComparison, Run } from '../types';
+import type { ComparisonStatus, PageComparison, Run } from '../types';
 
 type ViewMode = 'side' | 'overlay';
+type ComparisonFilter = 'all' | ComparisonStatus;
+
+const filters: ComparisonFilter[] = ['all', 'changed', 'added', 'removed', 'unchanged', 'error'];
 
 export function Comparisons({ run }: { run: Run }) {
     const [mode, setMode] = useState<ViewMode>('side');
+    const [filter, setFilter] = useState<ComparisonFilter>('all');
 
     if (run.comparisons.length === 0) {
         if (run.status === 'complete') {
@@ -21,6 +25,12 @@ export function Comparisons({ run }: { run: Run }) {
     }
 
     const ordered = sortComparisons(run.comparisons);
+    const visible = filter === 'all' ? ordered : ordered.filter((comparison) => comparison.status === filter);
+    const counts = new Map<ComparisonFilter, number>([['all', ordered.length]]);
+
+    for (const comparison of ordered) {
+        counts.set(comparison.status, (counts.get(comparison.status) ?? 0) + 1);
+    }
 
     return (
         <section data-mode={mode}>
@@ -31,8 +41,28 @@ export function Comparisons({ run }: { run: Run }) {
                     <button type="button" aria-pressed={mode === 'overlay'} onClick={() => setMode('overlay')}>Overlay</button>
                 </div>
             </div>
-            <p className="lede">{comparisonSummary(ordered)} Red marks changed pixels. The overlay slider fades this run over the baseline.</p>
-            {ordered.map((comparison) => (
+            <div className="filter-bar" role="group" aria-label="Filter pages">
+                {filters.map((status) => {
+                    const count = counts.get(status) ?? 0;
+
+                    return (
+                        <button
+                            key={status}
+                            type="button"
+                            aria-pressed={filter === status}
+                            disabled={status !== 'all' && count === 0}
+                            onClick={() => setFilter(status)}
+                        >
+                            {status === 'all' ? 'All' : label(status)}
+                            {' '}
+                            <span className="count">{count}</span>
+                        </button>
+                    );
+                })}
+            </div>
+            <p className="lede">Changed pages are listed first. {comparisonSummary(ordered)} Red marks changed pixels. The overlay slider fades this run over the baseline.</p>
+            {visible.length === 0 ? <p className="empty">No pages match this filter.</p> : null}
+            {visible.map((comparison) => (
                 <Comparison
                     key={`${comparison.urlId}-${comparison.resolution?.width ?? 0}x${comparison.resolution?.height ?? 0}`}
                     run={run}

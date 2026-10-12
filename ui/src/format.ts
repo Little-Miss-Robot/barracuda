@@ -84,7 +84,9 @@ export function comparisonSummary(comparisons: PageComparison[]): string {
         counts.set(comparison.status, (counts.get(comparison.status) ?? 0) + 1);
     }
 
-    return [...counts.entries()].map(([status, count]) => `${count} ${status}`).join(', ') + '.';
+    return [...counts.entries()]
+        .map(([status, count]) => `${count} ${label(status as ComparisonStatus).toLowerCase()}`)
+        .join(', ') + '.';
 }
 
 export function imagePath(

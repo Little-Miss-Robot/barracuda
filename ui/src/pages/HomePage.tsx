@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ApiError, createProject, deleteProject, listProjects, listRuns } from '../api';
-import { formatResolution, formatTime, isActive, label } from '../format';
+import { ApiError, createProject, listProjects, listRuns } from '../api';
+import { changeCount, formatResolution, formatTime, isActive, label } from '../format';
 import type { ListedRun, Project } from '../types';
 
 export function HomePage() {
@@ -12,8 +12,6 @@ export function HomePage() {
     const [name, setName] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
-    const [confirmingId, setConfirmingId] = useState<string | null>(null);
-    const [removingId, setRemovingId] = useState<string | null>(null);
 
     useEffect(() => {
         document.title = 'Projects · Barracuda';
@@ -70,22 +68,6 @@ export function HomePage() {
         }
     }
 
-    async function onRemove(project: Project) {
-        setRemovingId(project.urlId);
-        setError(null);
-
-        try {
-            await deleteProject(project.urlId);
-            setProjects((current) => current?.filter((item) => item.urlId !== project.urlId) ?? null);
-            setRuns((current) => current?.filter((item) => item.run.urlId !== project.urlId) ?? null);
-            setConfirmingId(null);
-        } catch (reason) {
-            setError(messageFrom(reason));
-        } finally {
-            setRemovingId(null);
-        }
-    }
-
     return (
         <>
             <section className="panel">
@@ -118,65 +100,48 @@ export function HomePage() {
                 </form>
             </section>
             <section>
-                <h2>All projects</h2>
                 {projects === null ? <p className="empty">Loading projects…</p> : null}
                 {projects?.length === 0 ? <p className="empty">No projects yet. Add a URL to create one.</p> : null}
                 {projects && projects.length > 0 ? (
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>URL</th>
-                                <th>Resolutions</th>
-                                <th>Latest run</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {projects.map((project) => {
-                                const projectRuns = (runs ?? []).filter((item) => item.run.urlId === project.urlId);
-                                const latest = projectRuns[0];
+                    <ul className="project-grid">
+                        {projects.map((project) => {
+                            const latest = (runs ?? []).find((item) => item.run.urlId === project.urlId);
+                            const changes = latest ? changeCount(latest.run) : null;
 
-                                return (
-                                    <tr key={project.urlId}>
-                                        <td><Link to={`/projects/${project.urlId}`}>{project.name}</Link></td>
-                                        <td><a href={project.url} target="_blank" rel="noreferrer">{project.url}</a></td>
-                                        <td>{project.resolutions.map(formatResolution).join(', ')}</td>
-                                        <td>
-                                            {latest ? (
-                                                <>
-                                                    <Link to={`/runs/${latest.run.id}`}>{formatTime(latest.run.createdAt)}</Link>
-                                                    {' '}
-                                                    <span className={`status status-${latest.run.status}`}>{label(latest.run.status)}</span>
-                                                </>
-                                            ) : '—'}
-                                        </td>
-                                        <td>
-                                            {confirmingId === project.urlId ? (
-                                                <div className="inline-actions">
-                                                    <button
-                                                        type="button"
-                                                        className="danger"
-                                                        disabled={removingId === project.urlId}
-                                                        onClick={() => onRemove(project)}
-                                                    >
-                                                        Remove project and runs
-                                                    </button>
-                                                    <button type="button" className="quiet" onClick={() => setConfirmingId(null)}>Cancel</button>
-                                                </div>
-                                            ) : (
-                                                <button type="button" className="quiet" onClick={() => setConfirmingId(project.urlId)}>Remove</button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                            return (
+                                <li className="project-card" key={project.urlId}>
+                                    <div className="card-heading">
+                                        <h2><Link to={`/projects/${project.urlId}`}>{project.name}</Link></h2>
+                                        {latest ? (
+                                            <span className={`status status-${latest.run.status}`}>{label(latest.run.status)}</span>
+                                        ) : null}
+                                    </div>
+                                    <a className="card-url" href={project.url} target="_blank" rel="noreferrer">{project.url}</a>
+                                    <p className="meta">{project.resolutions.map(formatResolution).join(', ')}</p>
+                                    <p className="meta">
+                                        {latest ? (
+                                            <>
+                                                <Link to={`/runs/${latest.run.id}`}>{formatTime(latest.run.createdAt)}</Link>
+                                                {' · '}
+                                                {changes === null ? 'No comparison yet' : formatChangeCount(changes)}
+                                            </>
+                                        ) : 'No runs yet'}
+                                    </p>
+                                    <p className="card-actions">
+                                        <Link className="quiet" to={`/projects/${project.urlId}/settings`}>Settings</Link>
+                                    </p>
+                                </li>
+                            );
+                        })}
+                    </ul>
                 ) : null}
             </section>
         </>
     );
+}
+
+function formatChangeCount(count: number): string {
+    return count === 1 ? '1 change' : `${count} changes`;
 }
 
 function messageFrom(reason: unknown): string {
