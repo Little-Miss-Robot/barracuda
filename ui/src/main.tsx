@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import '@mantine/core/styles.css';
 
-import {createTheme, MantineProvider} from '@mantine/core';
+import {Card, createTheme, MantineProvider} from '@mantine/core';
 
 const root = document.getElementById('root');
 
@@ -27,7 +27,17 @@ const theme = createTheme({
             '#171717',
             '#000000',
         ],
-    }
+    },
+    components: {
+        Card: Card.extend({
+            styles: {
+                root: {
+                    backgroundColor:
+                        'light-dark(var(--mantine-color-white), var(--mantine-color-dark-8))',
+                },
+            },
+        }),
+    },
 });
 
 createRoot(root).render(

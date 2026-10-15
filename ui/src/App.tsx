@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { Route, Routes, useLocation } from 'react-router-dom';
-import { AppShell } from '@mantine/core';
+import {Route, Routes, useLocation} from 'react-router-dom';
+import {AppShell} from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { AppHeader } from './components/shell/AppHeader';
 import { AppNavbar } from './components/shell/AppNavbar';
@@ -23,16 +23,13 @@ export function App() {
     return (
         <AppShell
             padding="xl"
-            header={{ height: 60 }}
             navbar={{
                 width: 240,
                 breakpoint: 'sm',
                 collapsed: { mobile: !opened },
             }}
         >
-            <AppShell.Header withBorder={false}>
-                <AppHeader opened={opened} onToggle={toggle} />
-            </AppShell.Header>
+            <AppHeader opened={opened} onToggle={toggle} />
             <AppShell.Navbar p="xs" m="xs" withBorder={false}>
                 <AppNavbar />
             </AppShell.Navbar>
