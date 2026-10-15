@@ -58,6 +58,10 @@ export function changeCount(run: Run): number | null {
     return run.comparisons.filter((comparison) => comparison.status !== 'unchanged').length;
 }
 
+export function formatChangeCount(count: number): string {
+    return count === 1 ? '1 change' : `${count} changes`;
+}
+
 export function sortComparisons(comparisons: PageComparison[]): PageComparison[] {
     return [...comparisons].sort((left, right) => {
         const byStatus = comparisonRank[left.status] - comparisonRank[right.status];
