@@ -91,7 +91,7 @@ export class VisRegTester {
                 failures: result.failures,
             });
 
-            await this.screenshotter.start(urls, runId, resolutions);
+            await this.screenshotter.start(urls, runId, resolutions, project.screenshotScript);
             await this.idStorage.set(`${existing.urlId}_last`, runId);
 
             if (!await this.idStorage.has(`${existing.urlId}_current`)) {

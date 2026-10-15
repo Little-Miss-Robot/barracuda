@@ -10,12 +10,14 @@ export type ProjectWrite = {
     name?: unknown;
     resolutions?: unknown;
     extraUrls?: unknown;
+    screenshotScript?: unknown;
 };
 
 export type ProjectPatch = {
     name?: unknown;
     resolutions?: unknown;
     extraUrls?: unknown;
+    screenshotScript?: unknown;
 };
 
 export const runIdPattern = /^[a-zA-Z0-9_-]{1,80}$/;
@@ -162,6 +164,18 @@ export function readExtraUrls(value: unknown): string[] {
     }
 
     return urls;
+}
+
+export function readScreenshotScript(value: unknown): string {
+    if (typeof value !== 'string') {
+        throw new ProjectError('The screenshot script must be text.', 400);
+    }
+
+    if (value.length > 20_000) {
+        throw new ProjectError('Use a screenshot script of 20,000 characters or fewer.', 400);
+    }
+
+    return value.trim();
 }
 
 export function isDimension(value: unknown): value is number {

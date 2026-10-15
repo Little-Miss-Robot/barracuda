@@ -9,7 +9,9 @@ import {
     ProjectWrite,
     readExtraUrls,
     readName,
-    readResolutions, runIdPattern
+    readResolutions,
+    readScreenshotScript,
+    runIdPattern
 } from "./utils/projects";
 import {Project} from "./entities/Project";
 import {ProjectError} from "./errors/ProjectError";
@@ -60,6 +62,7 @@ export class ProjectRepository {
             name: stored.name,
             resolutions: stored.resolutions?.length ? stored.resolutions : defaultResolutions(),
             extraUrls: stored.extraUrls ?? [],
+            screenshotScript: stored.screenshotScript ?? '',
         };
     }
 
@@ -78,6 +81,7 @@ export class ProjectRepository {
             name: parsed.hostname,
             resolutions: defaultResolutions(),
             extraUrls: [],
+            screenshotScript: '',
         };
 
         await this.storage.set(urlId, project);
@@ -103,6 +107,7 @@ export class ProjectRepository {
             name: input.name === undefined ? parsed.hostname : readName(input.name),
             resolutions: input.resolutions === undefined ? defaultResolutions() : readResolutions(input.resolutions),
             extraUrls: input.extraUrls === undefined ? [] : readExtraUrls(input.extraUrls),
+            screenshotScript: input.screenshotScript === undefined ? '' : readScreenshotScript(input.screenshotScript),
         };
 
         await this.storage.set(urlId, project);
@@ -117,8 +122,13 @@ export class ProjectRepository {
             throw new ProjectError('That project could not be found.', 404);
         }
 
-        if (patch.name === undefined && patch.resolutions === undefined && patch.extraUrls === undefined) {
-            throw new ProjectError('Choose a name, resolutions, or extra URLs to update.', 400);
+        if (
+            patch.name === undefined
+            && patch.resolutions === undefined
+            && patch.extraUrls === undefined
+            && patch.screenshotScript === undefined
+        ) {
+            throw new ProjectError('Choose a name, resolutions, extra URLs, or a screenshot script to update.', 400);
         }
 
         const next: Project = {
@@ -126,6 +136,9 @@ export class ProjectRepository {
             name: patch.name === undefined ? existing.name : readName(patch.name),
             resolutions: patch.resolutions === undefined ? existing.resolutions : readResolutions(patch.resolutions),
             extraUrls: patch.extraUrls === undefined ? existing.extraUrls : readExtraUrls(patch.extraUrls),
+            screenshotScript: patch.screenshotScript === undefined
+                ? existing.screenshotScript
+                : readScreenshotScript(patch.screenshotScript),
         };
 
         await this.storage.set(urlId, next);

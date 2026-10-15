@@ -17,7 +17,7 @@ export default class Screenshotter {
         this.filesystem = filesystem;
     }
 
-    public async start(urls: string[], runId: string, resolutions: Resolution[]) {
+    public async start(urls: string[], runId: string, resolutions: Resolution[], screenshotScript = '') {
 
         const browser = await chromium.launch({ headless: true });
 
@@ -39,6 +39,7 @@ export default class Screenshotter {
                             });
                             await page.evaluate(() => document.fonts.ready);
                             await this.settle(page);
+                            await this.inject(page, screenshotScript);
                             const path = screenshotPath(runId, this.urlIdGenerator.generate(url), resolution);
                             const screenshot = await page.screenshot({
                                 fullPage: true,
@@ -65,6 +66,16 @@ export default class Screenshotter {
         } finally {
             await browser.close();
         }
+    }
+
+    private async inject(page: Page, screenshotScript: string): Promise<void> {
+        const source = screenshotScript.trim();
+
+        if (!source) {
+            return;
+        }
+
+        await page.evaluate(`(async () => {\n${source}\n})()`);
     }
 
     private async settle(page: Page): Promise<void> {

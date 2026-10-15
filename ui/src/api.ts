@@ -37,6 +37,7 @@ export function createProject(input: {
     name?: string;
     resolutions?: Resolution[];
     extraUrls?: string[];
+    screenshotScript?: string;
 }): Promise<Project> {
     return request<Project>('/api/projects', {
         method: 'POST',
@@ -48,6 +49,7 @@ export function updateProject(urlId: string, input: {
     name: string;
     resolutions: Resolution[];
     extraUrls: string[];
+    screenshotScript: string;
 }): Promise<Project> {
     return request<Project>(`/api/projects/${encodeURIComponent(urlId)}`, {
         method: 'PATCH',

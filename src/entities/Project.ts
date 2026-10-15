@@ -6,4 +6,5 @@ export type Project = {
     name: string;
     resolutions: Resolution[];
     extraUrls: string[];
+    screenshotScript: string;
 };

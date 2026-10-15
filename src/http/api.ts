@@ -60,6 +60,7 @@ export function createApiRouter(tester: VisRegTester, projects: ProjectRepositor
                 name: request.body?.name,
                 resolutions: request.body?.resolutions,
                 extraUrls: request.body?.extraUrls,
+                screenshotScript: request.body?.screenshotScript,
             });
             response.status(201).json(project);
         } catch (error) {
@@ -98,6 +99,7 @@ export function createApiRouter(tester: VisRegTester, projects: ProjectRepositor
                 name: request.body?.name,
                 resolutions: request.body?.resolutions,
                 extraUrls: request.body?.extraUrls,
+                screenshotScript: request.body?.screenshotScript,
             }));
         } catch (error) {
             sendProjectError(error, response);

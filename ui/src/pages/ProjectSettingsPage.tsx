@@ -17,6 +17,7 @@ export function ProjectSettingsPage() {
     const [name, setName] = useState('');
     const [resolutions, setResolutions] = useState<ResolutionDraft[]>([]);
     const [extraUrls, setExtraUrls] = useState<string[]>([]);
+    const [screenshotScript, setScreenshotScript] = useState('');
     const [saving, setSaving] = useState(false);
     const [confirmingRemove, setConfirmingRemove] = useState(false);
     const [removing, setRemoving] = useState(false);
@@ -35,7 +36,7 @@ export function ProjectSettingsPage() {
                 }
 
                 setProject(nextProject);
-                fillSettings(nextProject, setName, setResolutions, setExtraUrls);
+                fillSettings(nextProject, setName, setResolutions, setExtraUrls, setScreenshotScript);
             })
             .catch((reason: unknown) => {
                 if (cancelled) {
@@ -75,11 +76,11 @@ export function ProjectSettingsPage() {
             : <p className="lede">Loading settings…</p>;
     }
 
-    const dirty = settingsChanged(project, name, resolutions, extraUrls);
+    const dirty = settingsChanged(project, name, resolutions, extraUrls, screenshotScript);
 
     async function onSave(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        const parsed = readSettings(name, resolutions, extraUrls);
+        const parsed = readSettings(name, resolutions, extraUrls, screenshotScript);
 
         if (typeof parsed === 'string') {
             setError(parsed);
@@ -92,7 +93,7 @@ export function ProjectSettingsPage() {
         try {
             const next = await updateProject(project!.urlId, parsed);
             setProject(next);
-            fillSettings(next, setName, setResolutions, setExtraUrls);
+            fillSettings(next, setName, setResolutions, setExtraUrls, setScreenshotScript);
         } catch (reason) {
             setError(messageFrom(reason));
         } finally {
@@ -219,6 +220,18 @@ export function ProjectSettingsPage() {
                             Add URL
                         </button>
                     </fieldset>
+                    <div>
+                        <label htmlFor="screenshot-script">Screenshot script</label>
+                        <p className="meta">JavaScript that runs in each page after it loads and before the screenshot. Use it to remove a cookie notice or hide elements that should not appear in the capture.</p>
+                        <textarea
+                            id="screenshot-script"
+                            className="script"
+                            spellCheck={false}
+                            placeholder={"document.querySelector('#cookie-notice')?.remove();"}
+                            value={screenshotScript}
+                            onChange={(event) => setScreenshotScript(event.target.value)}
+                        />
+                    </div>
                     <div className="inline-actions">
                         <button type="submit" disabled={saving || !dirty}>Save settings</button>
                         {confirmingRemove ? (
@@ -243,6 +256,7 @@ function fillSettings(
     setName: (name: string) => void,
     setResolutions: (resolutions: ResolutionDraft[]) => void,
     setExtraUrls: (urls: string[]) => void,
+    setScreenshotScript: (script: string) => void,
 ): void {
     setName(project.name);
     setResolutions(project.resolutions.map((resolution) => ({
@@ -250,13 +264,15 @@ function fillSettings(
         height: String(resolution.height),
     })));
     setExtraUrls(project.extraUrls);
+    setScreenshotScript(project.screenshotScript ?? '');
 }
 
 function readSettings(
     name: string,
     resolutions: ResolutionDraft[],
     extraUrls: string[],
-): { name: string; resolutions: Resolution[]; extraUrls: string[] } | string {
+    screenshotScript: string,
+): { name: string; resolutions: Resolution[]; extraUrls: string[]; screenshotScript: string } | string {
     const trimmedName = name.trim();
 
     if (!trimmedName) {
@@ -320,10 +336,17 @@ function readSettings(
         parsedUrls.push(parsed.href);
     }
 
+    const script = screenshotScript.trim();
+
+    if (script.length > 20_000) {
+        return 'Use a screenshot script of 20,000 characters or fewer.';
+    }
+
     return {
         name: trimmedName,
         resolutions: parsedResolutions,
         extraUrls: parsedUrls,
+        screenshotScript: script,
     };
 }
 
@@ -332,14 +355,16 @@ function settingsChanged(
     name: string,
     resolutions: ResolutionDraft[],
     extraUrls: string[],
+    screenshotScript: string,
 ): boolean {
-    const parsed = readSettings(name, resolutions, extraUrls);
+    const parsed = readSettings(name, resolutions, extraUrls, screenshotScript);
 
     if (typeof parsed === 'string') {
         return true;
     }
 
     return parsed.name !== project.name
+        || parsed.screenshotScript !== (project.screenshotScript ?? '')
         || parsed.extraUrls.join('\n') !== project.extraUrls.join('\n')
         || parsed.resolutions.length !== project.resolutions.length
         || parsed.resolutions.some((resolution, index) => (
