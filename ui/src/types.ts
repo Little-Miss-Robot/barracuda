@@ -33,11 +33,6 @@ export type Run = {
     comparisons: PageComparison[];
 };
 
-export type ListedRun = {
-    run: Run;
-    approved: boolean;
-};
-
 export type Project = {
     urlId: string;
     url: string;
@@ -45,4 +40,9 @@ export type Project = {
     resolutions: Resolution[];
     extraUrls: string[];
     screenshotScript: string;
+};
+
+export type ListedRun = {
+    run: Run;
+    approved: boolean;
 };

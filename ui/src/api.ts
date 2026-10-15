@@ -88,6 +88,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     return body as T;
 }
 
+export function messageFrom(reason: unknown): string {
+    if (reason instanceof ApiError || reason instanceof Error) {
+        return reason.message;
+    }
+
+    return 'The request could not be completed.';
+}
+
 function readError(body: unknown): string | undefined {
     if (body && typeof body === 'object' && 'error' in body && typeof body.error === 'string') {
         return body.error;

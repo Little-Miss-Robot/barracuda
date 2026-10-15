@@ -1,7 +1,12 @@
+import { Stack, Title } from '@mantine/core';
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ApiError, createRun, getProject, listRuns } from '../api';
-import { changeCount, formatResolution, formatTime, isActive, label } from '../format';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ApiError, createRun, getProject, listRuns, messageFrom } from '../api';
+import { Crumbs } from '../components/Crumbs';
+import { RunsTable } from '../components/entities/RunsTable';
+import { ProjectHeader } from '../components/project/ProjectHeader';
+import { ErrorAlert, LoadingState, MissingResource } from '../components/Status';
+import { isActive } from '../format';
 import type { ListedRun, Project } from '../types';
 
 export function ProjectPage() {
@@ -75,22 +80,18 @@ export function ProjectPage() {
 
     if (missing) {
         return (
-            <>
-                <p className="crumb"><Link to="/">Projects</Link></p>
-                <h1>Not found</h1>
-                <p className="lede">That project could not be found.</p>
-            </>
+            <MissingResource
+                title="Not found"
+                message="That project could not be found."
+            />
         );
     }
 
     if (!project || runs === null) {
         return error
-            ? <p className="banner" role="alert">{error}</p>
-            : <p className="lede">Loading project…</p>;
+            ? <ErrorAlert message={error} />
+            : <LoadingState label="Loading project…" />;
     }
-
-    const latest = runs[0];
-    const latestChanges = latest ? changeCount(latest.run) : null;
 
     async function onStart() {
         setStarting(true);
@@ -106,77 +107,19 @@ export function ProjectPage() {
     }
 
     return (
-        <>
-            <p className="crumb"><Link to="/">Projects</Link></p>
-            <header className="run-header">
-                <div>
-                    <h1>{project.name}</h1>
-                    <p className="meta"><a href={project.url} target="_blank" rel="noreferrer">{project.url}</a></p>
-                    <p className="meta">Resolutions: {project.resolutions.map(formatResolution).join(', ')}</p>
-                    <p className="meta">
-                        {latest ? (
-                            <>
-                                Latest run{' '}
-                                <Link to={`/runs/${latest.run.id}`}>{formatTime(latest.run.createdAt)}</Link>
-                                {' '}
-                                <span className={`status status-${latest.run.status}`}>{label(latest.run.status)}</span>
-                                {latest.approved ? <span className="status status-approved"> Baseline</span> : null}
-                                {latestChanges === null ? null : ` · ${formatChangeCount(latestChanges)}`}
-                            </>
-                        ) : 'No runs yet'}
-                    </p>
-                </div>
-                <div className="inline-actions">
-                    <button type="button" onClick={onStart} disabled={starting}>Start run</button>
-                    <Link className="quiet" to={`/projects/${project.urlId}/settings`}>Settings</Link>
-                </div>
-            </header>
-            {error ? <p className="banner" role="alert">{error}</p> : null}
-            <section>
-                <div className="section-heading">
-                    <h2>Runs</h2>
-                </div>
-                {runs.length === 0 ? <p className="empty">No runs yet. Start one to capture this project.</p> : null}
-                {runs.length > 0 ? (
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>When</th>
-                                <th>Status</th>
-                                <th>Changes</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {runs.map((item) => {
-                                const changes = changeCount(item.run);
-
-                                return (
-                                    <tr key={item.run.id}>
-                                        <td>
-                                            <Link to={`/runs/${item.run.id}`}>{formatTime(item.run.createdAt)}</Link>
-                                            {item.approved ? <span className="status status-approved"> Baseline</span> : null}
-                                        </td>
-                                        <td><span className={`status status-${item.run.status}`}>{label(item.run.status)}</span></td>
-                                        <td>{changes === null ? '—' : changes}</td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                ) : null}
-            </section>
-        </>
+        <Stack gap="lg">
+            <Crumbs items={[{ label: 'Projects', to: '/' }]} />
+            <ProjectHeader
+                project={project}
+                latest={runs[0]}
+                starting={starting}
+                onStart={onStart}
+            />
+            <ErrorAlert message={error} />
+            <Stack gap="sm">
+                <Title order={2}>Runs</Title>
+                <RunsTable runs={runs} empty="No runs yet. Start one to capture this project." />
+            </Stack>
+        </Stack>
     );
-}
-
-function formatChangeCount(count: number): string {
-    return count === 1 ? '1 change' : `${count} changes`;
-}
-
-function messageFrom(reason: unknown): string {
-    if (reason instanceof ApiError || reason instanceof Error) {
-        return reason.message;
-    }
-
-    return 'The request could not be completed.';
 }
