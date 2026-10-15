@@ -8,7 +8,11 @@ export default defineConfig({
     server: {
         port: 5174,
         proxy: {
-            '/api': api,
+            '/api': {
+                target: api,
+                timeout: 0,
+                proxyTimeout: 0,
+            },
             '^/runs/[^/]+/(images|diffs)/': api,
         },
     },

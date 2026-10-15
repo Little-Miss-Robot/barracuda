@@ -9,6 +9,8 @@ const app = createApp({
     filesystem: container.make('filesystem'),
 });
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
     console.log(`Visual regression UI at http://localhost:${port}`);
 });
+
+server.requestTimeout = 0;

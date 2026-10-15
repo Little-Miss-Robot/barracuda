@@ -1,4 +1,5 @@
-import type { ListedRun, Project, Resolution } from './types';
+import { isActive } from './format';
+import type { Capture, ListedRun, Project, Resolution } from './types';
 
 export class ApiError extends Error {
     status: number;
@@ -61,6 +62,41 @@ export function deleteProject(urlId: string): Promise<void> {
     return request<void>(`/api/projects/${encodeURIComponent(urlId)}`, {
         method: 'DELETE',
     });
+}
+
+export function subscribeToRun(
+    runId: string,
+    onRun: (listed: ListedRun) => void,
+    onScreenshot?: (capture: Capture) => void,
+): () => void {
+    const source = new EventSource(`/api/runs/${encodeURIComponent(runId)}/events`);
+    let closed = false;
+
+    const stop = () => {
+        closed = true;
+        source.close();
+    };
+
+    source.addEventListener('run', (event) => {
+        const listed = JSON.parse((event as MessageEvent<string>).data) as ListedRun;
+        onRun(listed);
+
+        if (!isActive(listed.run.status)) {
+            stop();
+        }
+    });
+
+    source.addEventListener('screenshot', (event) => {
+        onScreenshot?.(JSON.parse((event as MessageEvent<string>).data) as Capture);
+    });
+
+    source.onerror = () => {
+        if (closed || source.readyState === EventSource.CLOSED) {
+            return;
+        }
+    };
+
+    return stop;
 }
 
 export function approveRun(runId: string): Promise<ListedRun> {

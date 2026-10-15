@@ -1,6 +1,6 @@
 import { Card, Group, Stack, Text } from '@mantine/core';
 import { Link } from 'react-router-dom';
-import { changeCount, formatChangeCount, formatResolution, formatTime } from '../../format';
+import { activityLabel, changeCount, formatChangeCount, formatResolution, formatTime } from '../../format';
 import type { ListedRun, Project } from '../../types';
 import { BaselineBadge } from './BaselineBadge';
 import { RunStatusBadge } from './RunStatusBadge';
@@ -34,7 +34,7 @@ export function ProjectCard({ project, latestRun }: Props) {
                         <>
                             {formatTime(latestRun.run.createdAt)}
                             {' · '}
-                            {changes === null ? 'No comparison yet' : formatChangeCount(changes)}
+                            {activityLabel(latestRun.run) ?? (changes === null ? 'No comparison yet' : formatChangeCount(changes))}
                         </>
                     ) : 'No runs yet'}
                 </Text>

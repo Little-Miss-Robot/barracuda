@@ -15,6 +15,7 @@ import {ListingFilesystem} from "./contracts/ListingFilesystem";
 import {Project} from "./entities/Project";
 import {ProjectRepository} from "./ProjectRepository";
 import {Run} from "./entities/Run";
+import {RunEvents} from "./RunEvents";
 
 const container = new DefaultContainer<{
     filesystem: () => Filesystem & ListingFilesystem,
@@ -24,6 +25,7 @@ const container = new DefaultContainer<{
     idStorage: () => KeyValueStore<string>,
     urlIdGenerator: () => UrlIdGenerator,
     tester: () => VisRegTester,
+    runEvents: () => RunEvents,
     screenshotter: () => Screenshotter,
     urlScraper: () => UrlScraper,
     runComparer: () => RunComparer,
@@ -76,13 +78,16 @@ const container = new DefaultContainer<{
             container.make('imageComparer')
         );
     })
+    .singleton('runEvents', () => {
+        return new RunEvents();
+    })
     .bind('screenshotter', () => {
         return new Screenshotter(
             container.make('urlIdGenerator'),
             container.make('filesystem'),
         );
     })
-    .bind('tester', () => {
+    .singleton('tester', () => {
         return new VisRegTester(
             container.make('idGenerator'),
             container.make('urlIdGenerator'),
@@ -92,6 +97,7 @@ const container = new DefaultContainer<{
             container.make('idStorage'),
             container.make('runComparer'),
             container.make('projects'),
+            container.make('runEvents'),
         );
     });
 

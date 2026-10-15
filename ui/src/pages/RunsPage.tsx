@@ -3,8 +3,8 @@ import { useEffect, useState } from 'react';
 import { listRuns, messageFrom } from '../api';
 import { RunsTable } from '../components/entities/RunsTable';
 import { ErrorAlert } from '../components/Status';
-import { isActive } from '../format';
 import type { ListedRun } from '../types';
+import { useLiveRuns } from '../useLiveRuns';
 
 export function RunsPage() {
     const [runs, setRuns] = useState<ListedRun[] | null>(null);
@@ -14,36 +14,28 @@ export function RunsPage() {
         document.title = 'Runs · Barracuda';
     }, []);
 
+    useLiveRuns(runs, setRuns);
+
     useEffect(() => {
         let cancelled = false;
-        let timer = 0;
 
-        const load = () => {
-            listRuns()
-                .then((nextRuns) => {
-                    if (cancelled) {
-                        return;
-                    }
+        listRuns()
+            .then((nextRuns) => {
+                if (cancelled) {
+                    return;
+                }
 
-                    setRuns(nextRuns);
-                    setError(null);
-
-                    if (nextRuns.some((item) => isActive(item.run.status))) {
-                        timer = window.setTimeout(load, 2000);
-                    }
-                })
-                .catch((reason: unknown) => {
-                    if (!cancelled) {
-                        setError(messageFrom(reason));
-                    }
-                });
-        };
-
-        load();
+                setRuns(nextRuns);
+                setError(null);
+            })
+            .catch((reason: unknown) => {
+                if (!cancelled) {
+                    setError(messageFrom(reason));
+                }
+            });
 
         return () => {
             cancelled = true;
-            window.clearTimeout(timer);
         };
     }, []);
 

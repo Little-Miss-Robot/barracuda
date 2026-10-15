@@ -2,6 +2,7 @@ import {Filesystem} from "@littlemissrobot/highfive";
 import {chromium, type Page} from "playwright";
 import {screenshotPath} from "./utils/screenshots";
 import UrlIdGenerator from "./UrlIdGenerator";
+import {Capture} from "./entities/Capture";
 import {Resolution} from "./entities/Resolution";
 
 export default class Screenshotter {
@@ -17,7 +18,13 @@ export default class Screenshotter {
         this.filesystem = filesystem;
     }
 
-    public async start(urls: string[], runId: string, resolutions: Resolution[], screenshotScript = '') {
+    public async start(
+        urls: string[],
+        runId: string,
+        resolutions: Resolution[],
+        screenshotScript = '',
+        onCapture?: (capture: Capture) => Promise<void>,
+    ) {
 
         const browser = await chromium.launch({ headless: true });
 
@@ -31,6 +38,7 @@ export default class Screenshotter {
                 try {
                     for (const url of urls) {
                         const page = await context.newPage();
+                        let capture: Capture;
 
                         try {
                             await page.goto(url, {
@@ -47,17 +55,32 @@ export default class Screenshotter {
                             });
 
                             await this.filesystem.write(path, screenshot);
+                            capture = {
+                                url,
+                                urlId: this.urlIdGenerator.generate(url),
+                                resolution,
+                                status: 'captured',
+                            };
 
                             console.log(`Saved ${url} at ${resolution.width}x${resolution.height} → ${path}`);
 
                         } catch (error) {
 
                             console.error(`Failed to capture ${url}:`, error);
+                            capture = {
+                                url,
+                                urlId: this.urlIdGenerator.generate(url),
+                                resolution,
+                                status: 'failed',
+                                message: error instanceof Error ? error.message : String(error),
+                            };
 
                         } finally {
 
                             await page.close();
                         }
+
+                        await onCapture?.(capture);
                     }
                 } finally {
                     await context.close();

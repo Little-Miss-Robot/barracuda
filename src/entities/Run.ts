@@ -1,6 +1,8 @@
+import type {Capture} from "./Capture";
+import type {PageComparison} from "./PageComparison";
 import type {Resolution} from "./Resolution";
-import {RunStatus} from "./RunStatus";
-import {PageComparison} from "./PageComparison";
+import type {RunActivity} from "./RunActivity";
+import type {RunStatus} from "./RunStatus";
 
 export type Run = {
     id: string
@@ -11,6 +13,8 @@ export type Run = {
     resolutions: Resolution[]
     failures: {url: string, message: string}[]
     pending: string[]
+    captures: Capture[]
+    activity?: RunActivity
     status: RunStatus
     error?: string
     createdAt: string

@@ -8,6 +8,8 @@ import {mergeUrls, resolutionsOf} from "./utils/projects";
 import {Run} from "./entities/Run";
 import {ListedRun} from "./entities/ListedRun";
 import {ProjectRepository} from "./ProjectRepository";
+import {Capture} from "./entities/Capture";
+import {RunEvents} from "./RunEvents";
 
 export class VisRegTester {
     private idGenerator: IdGenerator;
@@ -18,6 +20,7 @@ export class VisRegTester {
     private idStorage: KeyValueStore<string>;
     private runComparer: RunComparer;
     private projects: ProjectRepository;
+    private events: RunEvents;
 
     constructor(
         idGenerator: IdGenerator,
@@ -28,6 +31,7 @@ export class VisRegTester {
         idStorage: KeyValueStore<string>,
         runComparer: RunComparer,
         projects: ProjectRepository,
+        events: RunEvents,
     ) {
         this.idGenerator = idGenerator;
         this.urlIdGenerator = urlIdGenerator;
@@ -37,6 +41,11 @@ export class VisRegTester {
         this.idStorage = idStorage;
         this.runComparer = runComparer;
         this.projects = projects;
+        this.events = events;
+    }
+
+    public runEvents(): RunEvents {
+        return this.events;
     }
 
     public async run(url: string): Promise<Run> {
@@ -56,6 +65,7 @@ export class VisRegTester {
             resolutions: [],
             failures: [],
             pending: [],
+            captures: [],
             status: 'queued',
             createdAt: new Date().toISOString(),
             comparisons: [],
@@ -74,13 +84,14 @@ export class VisRegTester {
         }
 
         try {
-            await this.save(existing, { status: 'running' });
+            await this.save(existing, { status: 'running', activity: { step: 'scraping' } });
 
             const project = await this.projects.ensure(existing.url);
             const resolutions = resolutionsOf(project.resolutions);
             const result = await this.urlScraper.scrape(existing.url);
             const urls = mergeUrls(result.urls, project.extraUrls);
             const urlIds = urls.map((url) => this.urlIdGenerator.generate(url));
+            const total = urls.length * resolutions.length;
 
             await this.save(existing, {
                 status: 'running',
@@ -89,9 +100,17 @@ export class VisRegTester {
                 resolutions,
                 pending: result.pending,
                 failures: result.failures,
+                activity: { step: 'capturing', done: 0, total },
             });
 
-            await this.screenshotter.start(urls, runId, resolutions, project.screenshotScript);
+            await this.screenshotter.start(
+                urls,
+                runId,
+                resolutions,
+                project.screenshotScript,
+                (capture) => this.recordCapture(existing, capture, total),
+            );
+            await this.save(existing, { activity: { step: 'comparing' } });
             await this.idStorage.set(`${existing.urlId}_last`, runId);
 
             if (!await this.idStorage.has(`${existing.urlId}_current`)) {
@@ -115,13 +134,14 @@ export class VisRegTester {
                 failures: result.failures,
                 baselineRunId: approvedRunId,
                 comparisons,
+                activity: undefined,
                 error: undefined,
             });
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
 
             try {
-                await this.save(existing, { status: 'failed', error: message });
+                await this.save(existing, { status: 'failed', error: message, activity: undefined });
             } catch (saveError) {
                 console.error(saveError);
             }
@@ -225,6 +245,8 @@ export class VisRegTester {
             resolutions: stored.resolutions ?? [],
             failures: stored.failures ?? [],
             pending: stored.pending ?? [],
+            captures: stored.captures ?? [],
+            activity: stored.activity,
             status: stored.status ?? 'complete',
             error: stored.error,
             createdAt: stored.createdAt ?? '',
@@ -233,10 +255,25 @@ export class VisRegTester {
         };
     }
 
+    private async recordCapture(run: Run, capture: Capture, total: number): Promise<void> {
+        const latest = await this.readRun(run.id);
+        const captures = [...(latest?.captures ?? []), capture];
+
+        await this.save(run, {
+            captures,
+            activity: { step: 'capturing', done: captures.length, total },
+        });
+        this.events.publish(run.id, { event: 'screenshot', data: capture });
+    }
+
     private async save(base: Run, patch: Partial<Run>): Promise<Run> {
         const latest = await this.readRun(base.id);
         const next: Run = { ...(latest ?? base), ...patch };
         await this.runStorage.set(base.id, next);
+        this.events.publish(next.id, {
+            event: 'run',
+            data: { run: next, approved: await this.isApproved(next) },
+        });
         return next;
     }
 }

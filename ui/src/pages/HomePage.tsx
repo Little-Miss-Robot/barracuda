@@ -4,8 +4,8 @@ import { listProjects, listRuns, messageFrom } from '../api';
 import { CreateProjectForm } from '../components/CreateProjectForm';
 import { ProjectCard } from '../components/entities/ProjectCard';
 import { ErrorAlert } from '../components/Status';
-import { isActive } from '../format';
 import type { ListedRun, Project } from '../types';
+import { useLiveRuns } from '../useLiveRuns';
 
 export function HomePage() {
     const [projects, setProjects] = useState<Project[] | null>(null);
@@ -16,37 +16,29 @@ export function HomePage() {
         document.title = 'Projects · Barracuda';
     }, []);
 
+    useLiveRuns(runs, setRuns);
+
     useEffect(() => {
         let cancelled = false;
-        let timer = 0;
 
-        const load = () => {
-            Promise.all([listProjects(), listRuns()])
-                .then(([nextProjects, nextRuns]) => {
-                    if (cancelled) {
-                        return;
-                    }
+        Promise.all([listProjects(), listRuns()])
+            .then(([nextProjects, nextRuns]) => {
+                if (cancelled) {
+                    return;
+                }
 
-                    setProjects(nextProjects);
-                    setRuns(nextRuns);
-                    setError(null);
-
-                    if (nextRuns.some((item) => isActive(item.run.status))) {
-                        timer = window.setTimeout(load, 2000);
-                    }
-                })
-                .catch((reason: unknown) => {
-                    if (!cancelled) {
-                        setError(messageFrom(reason));
-                    }
-                });
-        };
-
-        load();
+                setProjects(nextProjects);
+                setRuns(nextRuns);
+                setError(null);
+            })
+            .catch((reason: unknown) => {
+                if (!cancelled) {
+                    setError(messageFrom(reason));
+                }
+            });
 
         return () => {
             cancelled = true;
-            window.clearTimeout(timer);
         };
     }, []);
 

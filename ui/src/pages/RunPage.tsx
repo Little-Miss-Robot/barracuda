@@ -1,14 +1,15 @@
 import { Stack } from '@mantine/core';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
-import { ApiError, approveRun, getRun, messageFrom } from '../api';
+import { ApiError, approveRun, getRun, messageFrom, subscribeToRun } from '../api';
 import { Comparisons } from '../components/comparisons/Comparisons';
 import { Crumbs } from '../components/Crumbs';
 import { PendingUrls, ScrapeFailures } from '../components/run/RunIssues';
 import { RunHeader } from '../components/run/RunHeader';
+import { RunProgress } from '../components/run/RunProgress';
 import { ErrorAlert, LoadingState, MissingResource } from '../components/Status';
 import { isActive } from '../format';
-import type { ListedRun } from '../types';
+import type { Capture, ListedRun } from '../types';
 
 export function RunPage() {
     const { runId = '' } = useParams();
@@ -16,9 +17,15 @@ export function RunPage() {
     const [error, setError] = useState<string | null>(null);
     const [missing, setMissing] = useState(false);
     const [approving, setApproving] = useState(false);
+    const [latestCapture, setLatestCapture] = useState<Capture | null>(null);
 
     useEffect(() => {
         let cancelled = false;
+
+        setDetails(null);
+        setLatestCapture(null);
+        setMissing(false);
+        setError(null);
 
         getRun(runId)
             .then((next) => {
@@ -48,31 +55,21 @@ export function RunPage() {
         };
     }, [runId]);
 
-    const status = details?.run.status;
+    const watching = details ? isActive(details.run.status) : false;
 
     useEffect(() => {
-        if (!status || !isActive(status)) {
+        if (!watching) {
             return;
         }
 
-        const timer = window.setInterval(() => {
-            getRun(runId)
-                .then((next) => {
-                    setDetails(next);
-                    setError(null);
-                })
-                .catch((reason: unknown) => {
-                    if (reason instanceof ApiError && reason.status === 404) {
-                        setMissing(true);
-                        return;
-                    }
-
-                    setError(messageFrom(reason));
-                });
-        }, 2000);
-
-        return () => window.clearInterval(timer);
-    }, [runId, status]);
+        return subscribeToRun(runId, (next) => {
+            setDetails(next);
+            setMissing(false);
+            setError(null);
+        }, (capture) => {
+            setLatestCapture(capture);
+        });
+    }, [runId, watching]);
 
     useEffect(() => {
         document.title = `${details?.run.url ?? (missing ? 'Not found' : 'Run')} · Barracuda`;
@@ -124,6 +121,7 @@ export function RunPage() {
                 approving={approving}
                 onApprove={onApprove}
             />
+            <RunProgress run={run} latest={latestCapture} />
             <Comparisons run={run} />
             <ScrapeFailures run={run} />
             <PendingUrls run={run} />

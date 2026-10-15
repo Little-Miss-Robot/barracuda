@@ -33,6 +33,25 @@ export function isActive(status: RunStatus): boolean {
     return status === 'queued' || status === 'running';
 }
 
+export function activityLabel(run: Run): string | null {
+    if (!isActive(run.status) || !run.activity) {
+        return null;
+    }
+
+    if (run.activity.step === 'scraping') {
+        return 'Discovering pages';
+    }
+
+    if (run.activity.step === 'comparing') {
+        return 'Comparing screenshots';
+    }
+
+    const done = run.activity.done ?? run.captures?.length ?? 0;
+    const total = run.activity.total ?? 0;
+
+    return total > 0 ? `Capturing ${done} of ${total}` : 'Capturing screenshots';
+}
+
 export function formatTime(value: string): string {
     if (!value) {
         return '—';

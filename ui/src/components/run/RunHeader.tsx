@@ -1,7 +1,7 @@
 import { Alert, Anchor, Button, Group, Stack, Text, Title } from '@mantine/core';
 import { type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { formatTime, isActive } from '../../format';
+import { activityLabel, formatTime, isActive } from '../../format';
 import type { Run } from '../../types';
 import { BaselineBadge } from '../entities/BaselineBadge';
 import { RunStatusBadge } from '../entities/RunStatusBadge';
@@ -30,7 +30,7 @@ export function RunHeader({ run, approved, error, approving, onApprove }: Props)
                 </Group>
                 <BaselineNote run={run} />
                 {isActive(run.status) ? (
-                    <Text c="dimmed">This page refreshes until the run finishes.</Text>
+                    <Text c="dimmed">{activityLabel(run) ?? 'Live updates until the run finishes.'}</Text>
                 ) : null}
                 {run.error ? <Alert color="red" role="alert">{run.error}</Alert> : null}
                 {error ? <Alert color="red" role="alert">{error}</Alert> : null}

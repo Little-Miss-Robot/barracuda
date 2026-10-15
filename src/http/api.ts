@@ -2,6 +2,8 @@ import express, { type ErrorRequestHandler, type Request, type Response, type Ro
 import type { VisRegTester } from '../VisRegTester';
 import {ProjectRepository} from "../ProjectRepository";
 import {ProjectError} from "../errors/ProjectError";
+import type { RunStreamEvent } from '../RunEvents';
+import type { RunStatus } from '../entities/RunStatus';
 
 const runIdPattern = /^[a-zA-Z0-9_-]{1,80}$/;
 const urlIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -48,6 +50,28 @@ export function createApiRouter(tester: VisRegTester, projects: ProjectRepositor
 
         response.json(details);
     }));
+
+    router.get('/runs/:runId/events', (request, response) => {
+        const runId = routeParam(request.params.runId);
+
+        if (!runIdPattern.test(runId)) {
+            response.status(404).json({ error: 'That run could not be found.' });
+            return;
+        }
+
+        void streamRun(tester, runId, request, response).catch((error: unknown) => {
+            console.error(error);
+
+            if (!response.headersSent) {
+                response.status(500).json({ error: 'The request could not be completed.' });
+                return;
+            }
+
+            if (!response.writableEnded) {
+                response.end();
+            }
+        });
+    });
 
     router.get('/projects', asyncHandler(async (_request, response) => {
         response.json(await projects.list());
@@ -176,6 +200,114 @@ export function createApiRouter(tester: VisRegTester, projects: ProjectRepositor
     router.use(handleError);
 
     return router;
+}
+
+async function streamRun(
+    tester: VisRegTester,
+    runId: string,
+    request: Request,
+    response: Response,
+): Promise<void> {
+    let queue: RunStreamEvent[] | null = [];
+    let closed = false;
+    let heartbeat: ReturnType<typeof setInterval> | undefined;
+
+    const unsubscribe = tester.runEvents().subscribe(runId, (event) => {
+        if (queue) {
+            queue.push(event);
+            return;
+        }
+
+        send(event);
+    });
+
+    const cleanup = () => {
+        if (closed) {
+            return;
+        }
+
+        closed = true;
+        queue = null;
+        clearInterval(heartbeat);
+        unsubscribe();
+    };
+
+    const send = (event: RunStreamEvent) => {
+        if (closed || response.writableEnded) {
+            return;
+        }
+
+        response.write(`event: ${event.event}\ndata: ${JSON.stringify(event.data)}\n\n`);
+
+        if (event.event === 'run' && !isLive(event.data.run.status)) {
+            cleanup();
+            response.end();
+        }
+    };
+
+    const drain = () => {
+        while (queue && queue.length > 0 && !closed) {
+            const batch = queue;
+            queue = [];
+
+            for (const event of batch) {
+                send(event);
+
+                if (closed) {
+                    return;
+                }
+            }
+        }
+    };
+
+    request.on('close', cleanup);
+
+    const details = await tester.getRun(runId);
+
+    if (closed) {
+        return;
+    }
+
+    if (!details) {
+        cleanup();
+        response.status(404).json({ error: 'That run could not be found.' });
+        return;
+    }
+
+    response.status(200);
+    response.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    response.setHeader('Cache-Control', 'no-cache, no-transform');
+    response.setHeader('Connection', 'keep-alive');
+    response.setHeader('X-Accel-Buffering', 'no');
+    response.flushHeaders();
+    request.socket?.setTimeout(0);
+
+    send({ event: 'run', data: details });
+    drain();
+
+    if (closed) {
+        return;
+    }
+
+    if (!isLive(details.run.status)) {
+        cleanup();
+        response.end();
+        return;
+    }
+
+    queue = null;
+    heartbeat = setInterval(() => {
+        if (closed || response.writableEnded) {
+            cleanup();
+            return;
+        }
+
+        response.write(': ping\n\n');
+    }, 15_000);
+}
+
+function isLive(status: RunStatus): boolean {
+    return status === 'queued' || status === 'running';
 }
 
 function sendProjectError(error: unknown, response: Response): void {

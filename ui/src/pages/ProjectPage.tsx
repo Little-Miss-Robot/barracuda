@@ -6,8 +6,8 @@ import { Crumbs } from '../components/Crumbs';
 import { RunsTable } from '../components/entities/RunsTable';
 import { ProjectHeader } from '../components/project/ProjectHeader';
 import { ErrorAlert, LoadingState, MissingResource } from '../components/Status';
-import { isActive } from '../format';
 import type { ListedRun, Project } from '../types';
+import { useLiveRuns } from '../useLiveRuns';
 
 export function ProjectPage() {
     const { urlId = '' } = useParams();
@@ -53,26 +53,7 @@ export function ProjectPage() {
         };
     }, [urlId]);
 
-    const active = runs?.some((item) => isActive(item.run.status)) ?? false;
-
-    useEffect(() => {
-        if (!project || !active) {
-            return;
-        }
-
-        const timer = window.setInterval(() => {
-            listRuns()
-                .then((nextRuns) => {
-                    setRuns(nextRuns.filter((item) => item.run.urlId === project.urlId));
-                    setError(null);
-                })
-                .catch((reason: unknown) => {
-                    setError(messageFrom(reason));
-                });
-        }, 2000);
-
-        return () => window.clearInterval(timer);
-    }, [project, active]);
+    useLiveRuns(runs, setRuns);
 
     useEffect(() => {
         document.title = `${project?.name ?? (missing ? 'Not found' : 'Project')} · Barracuda`;

@@ -1,5 +1,19 @@
 export type RunStatus = 'queued' | 'running' | 'complete' | 'failed';
 
+export type Capture = {
+    url: string;
+    urlId: string;
+    resolution: Resolution;
+    status: 'captured' | 'failed';
+    message?: string;
+};
+
+export type RunActivity = {
+    step: 'scraping' | 'capturing' | 'comparing';
+    done?: number;
+    total?: number;
+};
+
 export type ComparisonStatus = 'unchanged' | 'changed' | 'added' | 'removed' | 'error';
 
 export type Resolution = {
@@ -26,6 +40,8 @@ export type Run = {
     resolutions?: Resolution[];
     failures: { url: string; message: string }[];
     pending: string[];
+    captures?: Capture[];
+    activity?: RunActivity;
     status: RunStatus;
     error?: string;
     createdAt: string;
