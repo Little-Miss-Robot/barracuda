@@ -1,9 +1,11 @@
-import { Card, Group, Stack, Text } from '@mantine/core';
+import {Card, Group, Stack, Text} from '@mantine/core';
 import { Link } from 'react-router-dom';
-import { activityLabel, changeCount, formatChangeCount, formatResolution, formatTime } from '../../format';
+import {activityLabel, changeCount, formatChangeCount, formatTime} from '../../format';
 import type { ListedRun, Project } from '../../types';
 import { BaselineBadge } from './BaselineBadge';
 import { RunStatusBadge } from './RunStatusBadge';
+import RunChart from "./RunChart";
+import RunThumbnail from "./RunThumbnail";
 
 type Props = {
     project: Project;
@@ -15,7 +17,7 @@ export function ProjectCard({ project, latestRun }: Props) {
 
     return (
         <Card shadow="sm" padding="lg" h="100%" component={Link} to={`/projects/${project.urlId}`}>
-            <Stack gap="sm" h="100%">
+            <Stack gap="sm">
                 <Group justify="space-between" wrap="nowrap" align="flex-start">
                     <Text fw={600}>
                         {project.name}
@@ -25,10 +27,15 @@ export function ProjectCard({ project, latestRun }: Props) {
                         {latestRun ? <RunStatusBadge run={latestRun.run} /> : null}
                     </Group>
                 </Group>
-                {project.url}
                 <Text size="sm" c="dimmed">
-                    {project.resolutions.map(formatResolution).join(', ')}
+                    {project.url}
                 </Text>
+                {latestRun && (
+                    <>
+                        <RunThumbnail run={latestRun.run} />
+                        <RunChart run={latestRun.run} />
+                    </>
+                )}
                 <Text size="sm" component="div">
                     {latestRun ? (
                         <>

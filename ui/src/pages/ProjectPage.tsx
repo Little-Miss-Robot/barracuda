@@ -7,7 +7,8 @@ import { RunsTable } from '../components/entities/RunsTable';
 import { ProjectHeader } from '../components/project/ProjectHeader';
 import { ErrorAlert, LoadingState, MissingResource } from '../components/Status';
 import type { ListedRun, Project } from '../types';
-import { useLiveRuns } from '../useLiveRuns';
+import { useLiveRuns } from '../hooks/useLiveRuns';
+import {useWindowTitle} from "../hooks/useWindowTitle";
 
 export function ProjectPage() {
     const { urlId = '' } = useParams();
@@ -54,10 +55,7 @@ export function ProjectPage() {
     }, [urlId]);
 
     useLiveRuns(runs, setRuns);
-
-    useEffect(() => {
-        document.title = `${project?.name ?? (missing ? 'Not found' : 'Project')} · Barracuda`;
-    }, [project, missing]);
+    useWindowTitle(`${project?.name ?? (missing ? 'Not found' : 'Project')}`);
 
     if (missing) {
         return (

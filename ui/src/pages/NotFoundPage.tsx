@@ -1,10 +1,9 @@
-import { useEffect } from 'react';
 import { MissingResource } from '../components/Status';
+import {useWindowTitle} from "../hooks/useWindowTitle";
 
 export function NotFoundPage() {
-    useEffect(() => {
-        document.title = 'Not found · Barracuda';
-    }, []);
+
+    useWindowTitle('Not found');
 
     return (
         <MissingResource

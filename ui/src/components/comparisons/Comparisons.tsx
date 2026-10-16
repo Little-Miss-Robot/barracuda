@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { comparisonSummary, label, sortComparisons } from '../../format';
 import type { ComparisonStatus, Run } from '../../types';
 import { ComparisonCard } from './ComparisonCard';
+import RunChart from "../entities/RunChart";
 
 type ViewMode = 'side' | 'overlay';
 type ComparisonFilter = 'all' | ComparisonStatus;
@@ -48,6 +49,7 @@ export function Comparisons({ run }: { run: Run }) {
                     aria-label="Diff layout"
                 />
             </Group>
+            <RunChart run={run} size={32} />
             <Chip.Group value={filter} onChange={(value) => setFilter(value as ComparisonFilter)}>
                 <Group gap="xs" aria-label="Filter pages">
                     {filters.map((status) => {

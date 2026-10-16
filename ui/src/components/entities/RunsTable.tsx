@@ -18,7 +18,7 @@ export function RunsTable({ runs, empty, showUrl = false }: Props) {
 
     return (
         <Table.ScrollContainer minWidth={860}>
-        <Table striped withRowBorders={false} stripedColor="dark.8">
+        <Table withRowBorders={true} borderColor="dark.8">
             <Table.Thead>
                 <Table.Tr>
                     <Table.Th>When</Table.Th>

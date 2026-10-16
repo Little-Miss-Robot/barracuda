@@ -1,7 +1,7 @@
 import { useEffect, type Dispatch, type SetStateAction } from 'react';
-import { subscribeToRun } from './api';
-import { isActive } from './format';
-import type { ListedRun } from './types';
+import { subscribeToRun } from '../api';
+import { isActive } from '../format';
+import {ListedRun} from "../../../src/entities/ListedRun";
 
 export function useLiveRuns(
     runs: ListedRun[] | null,

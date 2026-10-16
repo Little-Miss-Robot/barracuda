@@ -1,44 +1,33 @@
-import { useEffect } from 'react';
-import {Route, Routes, useLocation} from 'react-router-dom';
+import {Route, Routes} from 'react-router-dom';
 import {AppShell} from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
-import { AppHeader } from './components/shell/AppHeader';
 import { AppNavbar } from './components/shell/AppNavbar';
-import { HomePage } from './pages/HomePage';
+import { ProjectOverviewPage } from './pages/ProjectOverviewPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ProjectPage } from './pages/ProjectPage';
 import { ProjectSettingsPage } from './pages/ProjectSettingsPage';
 import { RunPage } from './pages/RunPage';
-import { RunsPage } from './pages/RunsPage';
+import { RunOverviewPage } from './pages/RunOverviewPage';
 import classes from './App.module.css';
 
 export function App() {
-    const [opened, { toggle, close }] = useDisclosure();
-    const { pathname } = useLocation();
-
-    useEffect(() => {
-        close();
-    }, [pathname, close]);
-
     return (
         <AppShell
             padding="xl"
+            withBorder={false}
             navbar={{
-                width: 240,
+                width: 62,
                 breakpoint: 'sm',
-                collapsed: { mobile: !opened },
             }}
         >
-            <AppHeader opened={opened} onToggle={toggle} />
-            <AppShell.Navbar p="xs" m="xs" withBorder={false}>
+            <AppShell.Navbar p="xs">
                 <AppNavbar />
             </AppShell.Navbar>
             <AppShell.Main className={classes.main}>
                 <Routes>
-                    <Route path="/" element={<HomePage />} />
+                    <Route path="/" element={<ProjectOverviewPage />} />
                     <Route path="/projects/:urlId" element={<ProjectPage />} />
                     <Route path="/projects/:urlId/settings" element={<ProjectSettingsPage />} />
-                    <Route path="/runs" element={<RunsPage />} />
+                    <Route path="/runs" element={<RunOverviewPage />} />
                     <Route path="/runs/:runId" element={<RunPage />} />
                     <Route path="*" element={<NotFoundPage />} />
                 </Routes>

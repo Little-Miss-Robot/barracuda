@@ -1,4 +1,4 @@
-import { Button, Group, Stack, TextInput } from '@mantine/core';
+import { Button, Stack, TextInput } from '@mantine/core';
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createProject, messageFrom } from '../api';
@@ -21,7 +21,9 @@ export function CreateProjectForm() {
                 url,
                 ...(name.trim() ? { name: name.trim() } : {}),
             });
+
             navigate(`/projects/${created.urlId}`);
+
         } catch (reason) {
             setError(messageFrom(reason));
             setSubmitting(false);
@@ -30,8 +32,8 @@ export function CreateProjectForm() {
 
     return (
         <form onSubmit={onSubmit}>
-            <Stack gap="sm">
-                <Group align="flex-end" wrap="wrap">
+            <Stack gap="lg">
+                <Stack gap="sm">
                     <TextInput
                         label="URL"
                         type="url"
@@ -39,19 +41,17 @@ export function CreateProjectForm() {
                         placeholder="https://example.com"
                         value={url}
                         onChange={(event) => setUrl(event.currentTarget.value)}
-                        flex="1 1 280px"
                     />
                     <TextInput
                         label="Name"
                         placeholder="Name"
                         value={name}
                         onChange={(event) => setName(event.currentTarget.value)}
-                        flex="1 1 180px"
                     />
-                    <Button type="submit" loading={submitting}>
-                        Add project
-                    </Button>
-                </Group>
+                </Stack>
+                <Button type="submit" loading={submitting}>
+                    Add project
+                </Button>
                 <ErrorAlert message={error} />
             </Stack>
         </form>
