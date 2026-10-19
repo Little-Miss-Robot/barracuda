@@ -1,4 +1,4 @@
-import {Filesystem} from "@littlemissrobot/highfive";
+import {Filesystem, Logger} from "@littlemissrobot/highfive";
 import {KeyValueStore} from "./contracts/KeyValueStore";
 import {PixelImageComparator} from "./PixelImageComparator";
 import {resolutionsOf} from "./utils/projects";
@@ -12,18 +12,23 @@ export class RunComparer {
     private readonly filesystem: Filesystem;
     private readonly runStorage: KeyValueStore<Run>;
     private readonly imageComparer: PixelImageComparator;
+    private readonly logger: Logger;
 
     constructor(
         filesystem: Filesystem,
         runStorage: KeyValueStore<Run>,
-        imageComparer: PixelImageComparator
+        imageComparer: PixelImageComparator,
+        logger: Logger
     ) {
         this.filesystem = filesystem;
         this.runStorage = runStorage;
         this.imageComparer = imageComparer;
+        this.logger = logger;
     }
 
     public async compare(runAId: string, runBId: string): Promise<PageComparison[]> {
+
+        this.logger.info(`Start comparing runs ${runAId} vs $${runBId}`);
 
         const runA = await this.runStorage.get(runAId);
         const runB = await this.runStorage.get(runBId);
@@ -69,6 +74,9 @@ export class RunComparer {
         runBId: string,
         shot: Shot,
     ): Promise<PageComparison> {
+
+        this.logger.info(`Start comparing page ${shot.url}`);
+
         const beforePath = await this.findScreenshot(runAId, shot);
         const afterPath = await this.findScreenshot(runBId, shot);
 
@@ -90,8 +98,7 @@ export class RunComparer {
 
             const result = this.imageComparer.compare(before, after);
 
-            console.log(`Difference: ${result.score.toFixed(2)}%`);
-            console.log(`Changed pixels: ${result.differentPixels}`);
+            this.logger.info(`Difference: ${result.score.toFixed(2)}%, changed pixels: ${result.differentPixels}`);
 
             await this.filesystem.write(diffPath(runBId, shot.urlId, shot.resolution), result.diffImage);
 
@@ -104,6 +111,8 @@ export class RunComparer {
                 differentPixels: result.differentPixels,
             };
         } catch (error) {
+            this.logger.error(`Error comparing page ${shot.url}`);
+
             return {
                 urlId: shot.urlId,
                 url: shot.url,

@@ -8,6 +8,8 @@ import { ProjectSettingsPage } from './pages/ProjectSettingsPage';
 import { RunPage } from './pages/RunPage';
 import { RunOverviewPage } from './pages/RunOverviewPage';
 import classes from './App.module.css';
+import {DashboardPage} from "./pages/DashboardPage";
+import {LogsPage} from "./pages/LogsPage";
 
 export function App() {
     return (
@@ -24,10 +26,12 @@ export function App() {
             </AppShell.Navbar>
             <AppShell.Main className={classes.main}>
                 <Routes>
-                    <Route path="/" element={<ProjectOverviewPage />} />
+                    <Route path="/" element={<DashboardPage />} />
+                    <Route path="/projects" element={<ProjectOverviewPage />} />
                     <Route path="/projects/:urlId" element={<ProjectPage />} />
                     <Route path="/projects/:urlId/settings" element={<ProjectSettingsPage />} />
                     <Route path="/runs" element={<RunOverviewPage />} />
+                    <Route path="/logs" element={<LogsPage />} />
                     <Route path="/runs/:runId" element={<RunPage />} />
                     <Route path="*" element={<NotFoundPage />} />
                 </Routes>

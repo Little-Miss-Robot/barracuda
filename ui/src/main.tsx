@@ -5,7 +5,7 @@ import {QueryClient, QueryClientProvider,} from '@tanstack/react-query';
 import { App } from './App';
 import '@mantine/core/styles.css';
 
-import {Anchor, Card, createTheme, MantineProvider} from '@mantine/core';
+import {Anchor, Card, createTheme, MantineProvider, Paper} from '@mantine/core';
 
 const root = document.getElementById('root');
 
@@ -52,11 +52,19 @@ const theme = createTheme({
                 },
             },
         }),
+        Paper: Paper.extend({
+            styles: {
+                root: {
+                    backgroundColor:
+                        'light-dark(var(--mantine-color-white), var(--mantine-color-dark-8))',
+                },
+            },
+        }),
         Anchor: Anchor.extend({
             styles: {
                 root: {
                     color:
-                        'light-dark(var(--mantine-color-black), var(--mantine-color-white))',
+                        'light-dark(var(--mantine-color-black), var(--mantine-color-dark-1))',
                 },
             },
         }),

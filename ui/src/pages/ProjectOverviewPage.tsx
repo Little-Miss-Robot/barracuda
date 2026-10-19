@@ -14,7 +14,19 @@ export function ProjectOverviewPage() {
     const {runs, isLoading: isListedRunsLoading} = useListedRuns();
 
     return (
-        <Module title="Projects" actions={<CreateProjectButton />}>
+        <Module
+            title="Projects"
+            crumbs={[
+                {
+                    label: "Dashboard",
+                    to: "/"
+                },
+                {
+                    label: "Projects",
+                }
+            ]}
+            actions={<CreateProjectButton />}
+        >
             {isProjectsLoading || isListedRunsLoading ? (
                 <LoadingState label="Loading projects…" />
             ) : (

@@ -1,11 +1,11 @@
-import { Anchor, Stack, Title } from '@mantine/core';
+import { Anchor } from '@mantine/core';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ApiError, deleteProject, getProject, messageFrom, updateProject } from '../api';
-import { Crumbs } from '../components/Crumbs';
 import { ProjectSettingsForm, type ProjectSettingsInput } from '../components/ProjectSettingsForm';
 import { ErrorAlert, LoadingState, MissingResource } from '../components/Status';
 import type { Project } from '../types';
+import Module from "../components/Module";
 
 export function ProjectSettingsPage() {
     const { urlId = '' } = useParams();
@@ -93,26 +93,26 @@ export function ProjectSettingsPage() {
     }
 
     return (
-        <Stack gap="lg">
-            <Crumbs
-                items={[
-                    { label: 'Projects', to: '/' },
+        <>
+            <Module
+                title="Settings"
+                crumbs={[
+                    { label: 'Dashboard', to: '/' },
+                    { label: 'Projects', to: '/projects' },
                     { label: project.name, to: `/projects/${project.urlId}` },
                     { label: 'Settings' },
                 ]}
-            />
-            <Stack gap={4}>
-                <Title order={1}>Settings</Title>
+            >
                 <Anchor href={project.url} target="_blank" rel="noreferrer">{project.url}</Anchor>
-            </Stack>
-            <ProjectSettingsForm
-                project={project}
-                saving={saving}
-                removing={removing}
-                error={error}
-                onSave={onSave}
-                onRemove={onRemove}
-            />
-        </Stack>
+                <ProjectSettingsForm
+                    project={project}
+                    saving={saving}
+                    removing={removing}
+                    error={error}
+                    onSave={onSave}
+                    onRemove={onRemove}
+                />
+            </Module>
+        </>
     );
 }

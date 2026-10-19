@@ -1,4 +1,4 @@
-import type {IdGenerator} from '@littlemissrobot/highfive';
+import type {EventBus, IdGenerator} from '@littlemissrobot/highfive';
 import Screenshotter from "./Screenshotter";
 import {UrlScraper} from "./UrlScraper";
 import {KeyValueStore} from "./contracts/KeyValueStore";
@@ -9,7 +9,7 @@ import {Run} from "./entities/Run";
 import {ListedRun} from "./entities/ListedRun";
 import {ProjectRepository} from "./ProjectRepository";
 import {Capture} from "./entities/Capture";
-import {RunEvents} from "./RunEvents";
+import {RunEventMap} from "./entities/RunEventMap";
 
 export class VisRegTester {
     private idGenerator: IdGenerator;
@@ -20,7 +20,7 @@ export class VisRegTester {
     private idStorage: KeyValueStore<string>;
     private runComparer: RunComparer;
     private projects: ProjectRepository;
-    private events: RunEvents;
+    private events: EventBus<RunEventMap>;
 
     constructor(
         idGenerator: IdGenerator,
@@ -31,7 +31,7 @@ export class VisRegTester {
         idStorage: KeyValueStore<string>,
         runComparer: RunComparer,
         projects: ProjectRepository,
-        events: RunEvents,
+        events: EventBus<RunEventMap>,
     ) {
         this.idGenerator = idGenerator;
         this.urlIdGenerator = urlIdGenerator;
@@ -44,7 +44,7 @@ export class VisRegTester {
         this.events = events;
     }
 
-    public runEvents(): RunEvents {
+    public runEvents(): EventBus<RunEventMap> {
         return this.events;
     }
 
@@ -263,17 +263,19 @@ export class VisRegTester {
             captures,
             activity: { step: 'capturing', done: captures.length, total },
         });
-        this.events.publish(run.id, { event: 'screenshot', data: capture });
+        this.events.emit('screenshot', capture);
     }
 
     private async save(base: Run, patch: Partial<Run>): Promise<Run> {
         const latest = await this.readRun(base.id);
         const next: Run = { ...(latest ?? base), ...patch };
         await this.runStorage.set(base.id, next);
-        this.events.publish(next.id, {
-            event: 'run',
-            data: { run: next, approved: await this.isApproved(next) },
+
+        this.events.emit('run', {
+            run: next,
+            approved: await this.isApproved(next)
         });
+
         return next;
     }
 }

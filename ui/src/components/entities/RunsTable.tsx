@@ -9,60 +9,72 @@ type Props = {
     runs: ListedRun[];
     empty: string;
     showUrl?: boolean;
+    showId?: boolean;
+    showDate?: boolean;
 };
 
-export function RunsTable({ runs, empty, showUrl = false }: Props) {
+export function RunsTable({ runs, empty, showUrl = false, showDate = true, showId = true }: Props) {
     if (runs.length === 0) {
         return <Text c="dimmed">{empty}</Text>;
     }
 
     return (
         <Table.ScrollContainer minWidth={860}>
-        <Table withRowBorders={true} borderColor="dark.8">
-            <Table.Thead>
-                <Table.Tr>
-                    <Table.Th>When</Table.Th>
-                    {showUrl ? <Table.Th>Project</Table.Th> : null}
-                    <Table.Th>Status</Table.Th>
-                    <Table.Th>Changes</Table.Th>
-                </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-                {runs.map((item) => {
-                    const changes = changeCount(item.run);
-                    const activity = activityLabel(item.run);
+            <Table withRowBorders={true} borderColor="dark.8">
+                <Table.Thead>
+                    <Table.Tr>
+                        {showId ? <Table.Th>ID</Table.Th> : null}
+                        {showDate ? <Table.Th>When</Table.Th> : null}
+                        {showUrl ? <Table.Th>Project</Table.Th> : null}
+                        <Table.Th>Status</Table.Th>
+                        <Table.Th>Changes</Table.Th>
+                    </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                    {runs.map((item) => {
+                        const changes = changeCount(item.run);
+                        const activity = activityLabel(item.run);
 
-                    return (
-                        <Table.Tr key={item.run.id}>
-                            <Table.Td style={{ whiteSpace: 'nowrap' }}>
-                                <Anchor component={Link} to={`/runs/${item.run.id}`}>
-                                    {formatTime(item.run.createdAt)}
-                                </Anchor>
-                            </Table.Td>
-                            {showUrl ? (
-                                <Table.Td>
-                                    <Anchor component={Link} to={`/projects/${item.run.urlId}`} lineClamp={1} maw={360}>
-                                        {item.run.url}
-                                    </Anchor>
+                        return (
+                            <Table.Tr key={item.run.id}>
+                                {showId ? (
+                                    <Table.Td style={{ whiteSpace: 'nowrap' }}>
+                                        <Anchor component={Link} to={`/runs/${item.run.id}`}>
+                                            {item.run.id}
+                                        </Anchor>
+                                    </Table.Td>
+                                ) : null}
+                                {showDate ? (
+                                    <Table.Td style={{ whiteSpace: 'nowrap' }}>
+                                        <Anchor component={Link} to={`/runs/${item.run.id}`}>
+                                            {formatTime(item.run.createdAt)}
+                                        </Anchor>
+                                    </Table.Td>
+                                ) : null}
+                                {showUrl ? (
+                                    <Table.Td>
+                                        <Anchor component={Link} to={`/projects/${item.run.urlId}`} lineClamp={1} maw={360}>
+                                            {item.run.url}
+                                        </Anchor>
+                                    </Table.Td>
+                                ) : null}
+                                <Table.Td style={{ whiteSpace: 'nowrap' }}>
+                                    <Stack gap={4}>
+                                        <Group gap="xs" wrap="nowrap">
+                                            <RunStatusBadge run={item.run} />
+                                            {item.approved ? <BaselineBadge /> : null}
+                                        </Group>
+                                        {activity ? (
+                                            <Text size="xs" c="dimmed">{activity}</Text>
+                                        ) : null}
+                                    </Stack>
                                 </Table.Td>
-                            ) : null}
-                            <Table.Td style={{ whiteSpace: 'nowrap' }}>
-                                <Stack gap={4}>
-                                    <Group gap="xs" wrap="nowrap">
-                                        <RunStatusBadge run={item.run} />
-                                        {item.approved ? <BaselineBadge /> : null}
-                                    </Group>
-                                    {activity ? (
-                                        <Text size="xs" c="dimmed">{activity}</Text>
-                                    ) : null}
-                                </Stack>
-                            </Table.Td>
-                            <Table.Td>{changes === null ? '—' : changes}</Table.Td>
-                        </Table.Tr>
-                    );
-                })}
-            </Table.Tbody>
-        </Table>
+                                <Table.Td>{changes === null ? '—' : changes}</Table.Td>
+                            </Table.Tr>
+                        );
+                    })}
+                </Table.Tbody>
+            </Table>
         </Table.ScrollContainer>
     );
 }

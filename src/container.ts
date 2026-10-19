@@ -1,6 +1,7 @@
 import {
-    DefaultContainer, Filesystem,
-    identifiersProvider,
+    clockProvider,
+    DefaultContainer, EventBus, Filesystem,
+    identifiersProvider, InMemoryEventBus, loggerProvider,
 } from "@littlemissrobot/highfive";
 import Screenshotter from "./Screenshotter";
 import {LocalFilesystem} from "./LocalFilesystem";
@@ -15,7 +16,8 @@ import {ListingFilesystem} from "./contracts/ListingFilesystem";
 import {Project} from "./entities/Project";
 import {ProjectRepository} from "./ProjectRepository";
 import {Run} from "./entities/Run";
-import {RunEvents} from "./RunEvents";
+import FileLogger from "./FileLogger";
+import {RunEventMap} from "./entities/RunEventMap";
 
 const container = new DefaultContainer<{
     filesystem: () => Filesystem & ListingFilesystem,
@@ -25,16 +27,23 @@ const container = new DefaultContainer<{
     idStorage: () => KeyValueStore<string>,
     urlIdGenerator: () => UrlIdGenerator,
     tester: () => VisRegTester,
-    runEvents: () => RunEvents,
     screenshotter: () => Screenshotter,
     urlScraper: () => UrlScraper,
     runComparer: () => RunComparer,
     imageComparer: () => PixelImageComparator,
+    runEvents: () => EventBus<RunEventMap>,
 }>()
+    .register(clockProvider)
+    .register(loggerProvider)
     .register(identifiersProvider);
 
     container.singleton('imageComparer', () => {
         return new PixelImageComparator();
+    })
+    .singleton('logger', () => {
+        return new FileLogger(
+            container.make('filesystem')
+        );
     })
     .singleton('urlIdGenerator', () => {
         return new UrlIdGenerator();
@@ -75,16 +84,18 @@ const container = new DefaultContainer<{
         return new RunComparer(
             container.make('filesystem'),
             container.make('runStorage'),
-            container.make('imageComparer')
+            container.make('imageComparer'),
+            container.make('logger')
         );
     })
     .singleton('runEvents', () => {
-        return new RunEvents();
+        return new InMemoryEventBus<RunEventMap>();
     })
     .bind('screenshotter', () => {
         return new Screenshotter(
             container.make('urlIdGenerator'),
             container.make('filesystem'),
+            container.make('logger')
         );
     })
     .singleton('tester', () => {

@@ -1,4 +1,4 @@
-import {Filesystem} from "@littlemissrobot/highfive";
+import {Filesystem, Logger} from "@littlemissrobot/highfive";
 import {chromium, type Page} from "playwright";
 import {screenshotPath} from "./utils/screenshots";
 import UrlIdGenerator from "./UrlIdGenerator";
@@ -9,13 +9,16 @@ export default class Screenshotter {
 
     private urlIdGenerator: UrlIdGenerator;
     private filesystem: Filesystem;
+    private logger: Logger;
 
     constructor(
         urlIdGenerator: UrlIdGenerator,
-        filesystem: Filesystem
+        filesystem: Filesystem,
+        logger: Logger
     ) {
         this.urlIdGenerator = urlIdGenerator;
         this.filesystem = filesystem;
+        this.logger = logger;
     }
 
     public async start(
@@ -25,6 +28,7 @@ export default class Screenshotter {
         screenshotScript = '',
         onCapture?: (capture: Capture) => Promise<void>,
     ) {
+        this.logger.info(`Starting headless browser for screenshotting`);
 
         const browser = await chromium.launch({ headless: true });
 
@@ -62,11 +66,12 @@ export default class Screenshotter {
                                 status: 'captured',
                             };
 
-                            console.log(`Saved ${url} at ${resolution.width}x${resolution.height} → ${path}`);
+                            this.logger.info(`Saved ${url} at ${resolution.width}x${resolution.height} → ${path}`)
 
                         } catch (error) {
 
-                            console.error(`Failed to capture ${url}:`, error);
+                            this.logger.error(`Failed to capture ${url}`)
+
                             capture = {
                                 url,
                                 urlId: this.urlIdGenerator.generate(url),

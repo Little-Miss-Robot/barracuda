@@ -25,6 +25,11 @@ export function RunPage() {
     return (
         <Module
             title={run?.run?.id || ''}
+            crumbs={[
+                { label: "Dashboard", to: "/" },
+                { label: "Runs", to: "/runs" },
+                { label: run?.run.id ?? '',}
+            ]}
             actions={(run && !run.approved) && (
                 <Button onClick={onApprove}>Approve as baseline</Button>
             )}

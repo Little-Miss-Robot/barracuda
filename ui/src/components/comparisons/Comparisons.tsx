@@ -37,8 +37,26 @@ export function Comparisons({ run }: { run: Run }) {
 
     return (
         <Stack gap="md">
+            <Title order={2}>Diffs</Title>
+            <RunChart run={run} size={32} />
             <Group justify="space-between" align="center">
-                <Title order={2}>Diffs</Title>
+                <Chip.Group value={filter} onChange={(value) => setFilter(value as ComparisonFilter)}>
+                    <Group gap="xs" aria-label="Filter pages">
+                        {filters.map((status) => {
+                            const count = counts.get(status) ?? 0;
+
+                            return (
+                                <Chip
+                                    key={status}
+                                    value={status}
+                                    disabled={status !== 'all' && count === 0}
+                                >
+                                    {status === 'all' ? 'All' : label(status)} {count}
+                                </Chip>
+                            );
+                        })}
+                    </Group>
+                </Chip.Group>
                 <SegmentedControl
                     value={mode}
                     onChange={(value) => setMode(value as ViewMode)}
@@ -49,24 +67,6 @@ export function Comparisons({ run }: { run: Run }) {
                     aria-label="Diff layout"
                 />
             </Group>
-            <RunChart run={run} size={32} />
-            <Chip.Group value={filter} onChange={(value) => setFilter(value as ComparisonFilter)}>
-                <Group gap="xs" aria-label="Filter pages">
-                    {filters.map((status) => {
-                        const count = counts.get(status) ?? 0;
-
-                        return (
-                            <Chip
-                                key={status}
-                                value={status}
-                                disabled={status !== 'all' && count === 0}
-                            >
-                                {status === 'all' ? 'All' : label(status)} {count}
-                            </Chip>
-                        );
-                    })}
-                </Group>
-            </Chip.Group>
             <Text c="dimmed">
                 Changed pages are listed first. {comparisonSummary(ordered)} Red marks changed pixels. The overlay slider fades this run over the baseline.
             </Text>

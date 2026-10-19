@@ -1,14 +1,13 @@
 import {ActionIcon, Divider, Stack} from '@mantine/core';
 import {
-    FishSimpleIcon,
-    GridFourIcon,
+    FishSimpleIcon, GaugeIcon,
+    GridFourIcon, NotepadIcon,
     TerminalWindowIcon
 } from '@phosphor-icons/react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import ModuleNavIcon from "./ModuleNavIcon";
 
 export function AppNavbar() {
-    const { pathname } = useLocation();
-
     return (
         <Stack>
             <Stack gap="xs">
@@ -22,24 +21,18 @@ export function AppNavbar() {
                     <FishSimpleIcon size={24} />
                 </ActionIcon>
                 <Divider />
-                <ActionIcon
-                    variant={pathname === '/' || pathname.startsWith('/projects') ? 'filled' : 'subtle'}
-                    aria-label="Projects"
-                    component={Link}
-                    to="/"
-                    size="xl"
-                >
+                <ModuleNavIcon path="/" label="Dashboard">
+                    <GaugeIcon size={24} />
+                </ModuleNavIcon>
+                <ModuleNavIcon path="/projects" label="Projects">
                     <GridFourIcon size={24} />
-                </ActionIcon>
-                <ActionIcon
-                    variant={pathname.startsWith('/runs') ? 'filled' : 'subtle'}
-                    aria-label="Runs"
-                    component={Link}
-                    to="/runs"
-                    size="xl"
-                >
+                </ModuleNavIcon>
+                <ModuleNavIcon path="/runs" label="Runs">
                     <TerminalWindowIcon size={24} />
-                </ActionIcon>
+                </ModuleNavIcon>
+                <ModuleNavIcon path="/logs" label="Logs">
+                    <NotepadIcon size={24} />
+                </ModuleNavIcon>
             </Stack>
         </Stack>
     );
