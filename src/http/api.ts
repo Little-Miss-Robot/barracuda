@@ -2,6 +2,7 @@ import express, { type ErrorRequestHandler, type Request, type Response, type Ro
 import type { VisRegTester } from '../VisRegTester';
 import {ProjectRepository} from "../ProjectRepository";
 import {ProjectError} from "../errors/ProjectError";
+import {RunError} from "../errors/RunError";
 
 const runIdPattern = /^[a-zA-Z0-9_-]{1,80}$/;
 const urlIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -119,6 +120,26 @@ export function createApiRouter(tester: VisRegTester, projects: ProjectRepositor
             response.status(204).end();
         } catch (error) {
             sendProjectError(error, response);
+        }
+    }));
+
+    router.delete('/runs/:runId', asyncHandler(async (request, response) => {
+        const runId = routeParam(request.params.runId);
+
+        if (!runIdPattern.test(runId)) {
+            response.status(404).json({ error: 'That run could not be found.' });
+            return;
+        }
+
+        try {
+            await tester.deleteRun(runId);
+            response.status(204).end();
+        } catch (error) {
+            if (!(error instanceof RunError)) {
+                throw error;
+            }
+
+            response.status(error.status).json({ error: error.message });
         }
     }));
 

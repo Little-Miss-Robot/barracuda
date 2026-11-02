@@ -99,6 +99,12 @@ export function subscribeToRun(
     return stop;
 }
 
+export function deleteRun(runId: string): Promise<void> {
+    return request<void>(`/api/runs/${encodeURIComponent(runId)}`, {
+        method: 'DELETE',
+    });
+}
+
 export function approveRun(runId: string): Promise<ListedRun> {
     return request<ListedRun>(`/api/runs/${encodeURIComponent(runId)}/approve`, {
         method: 'POST',

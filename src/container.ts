@@ -109,6 +109,7 @@ const container = new DefaultContainer<{
             container.make('runComparer'),
             container.make('projects'),
             container.make('runEvents'),
+            container.make('filesystem'),
         );
     });
 

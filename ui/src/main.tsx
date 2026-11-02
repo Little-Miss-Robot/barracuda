@@ -4,8 +4,11 @@ import { BrowserRouter } from 'react-router-dom';
 import {QueryClient, QueryClientProvider,} from '@tanstack/react-query';
 import { App } from './App';
 import '@mantine/core/styles.css';
+import '@mantine/notifications/styles.css';
 
 import {Anchor, Card, createTheme, MantineProvider, Paper} from '@mantine/core';
+import {ModalsProvider} from '@mantine/modals';
+import {Notifications} from '@mantine/notifications';
 
 const root = document.getElementById('root');
 
@@ -78,7 +81,10 @@ createRoot(root).render(
         <StrictMode>
             <BrowserRouter>
                 <MantineProvider theme={theme} defaultColorScheme="auto">
-                    <App />
+                    <ModalsProvider>
+                        <Notifications />
+                        <App />
+                    </ModalsProvider>
                 </MantineProvider>
             </BrowserRouter>
         </StrictMode>
