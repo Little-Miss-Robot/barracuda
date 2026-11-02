@@ -1,7 +1,8 @@
-import type {EventBus, IdGenerator} from '@littlemissrobot/highfive';
+import type {EventBus, Filesystem, IdGenerator} from '@littlemissrobot/highfive';
 import Screenshotter from "./Screenshotter";
 import {UrlScraper} from "./UrlScraper";
 import {KeyValueStore} from "./contracts/KeyValueStore";
+import {ListingFilesystem} from "./contracts/ListingFilesystem";
 import UrlIdGenerator from "./UrlIdGenerator";
 import {RunComparer} from "./RunComparer";
 import {mergeUrls, resolutionsOf} from "./utils/projects";
@@ -10,6 +11,7 @@ import {ListedRun} from "./entities/ListedRun";
 import {ProjectRepository} from "./ProjectRepository";
 import {Capture} from "./entities/Capture";
 import {RunEventMap} from "./entities/RunEventMap";
+import {RunError} from "./errors/RunError";
 
 export class VisRegTester {
     private idGenerator: IdGenerator;
@@ -21,6 +23,7 @@ export class VisRegTester {
     private runComparer: RunComparer;
     private projects: ProjectRepository;
     private events: EventBus<RunEventMap>;
+    private filesystem: Filesystem & ListingFilesystem;
 
     constructor(
         idGenerator: IdGenerator,
@@ -32,6 +35,7 @@ export class VisRegTester {
         runComparer: RunComparer,
         projects: ProjectRepository,
         events: EventBus<RunEventMap>,
+        filesystem: Filesystem & ListingFilesystem,
     ) {
         this.idGenerator = idGenerator;
         this.urlIdGenerator = urlIdGenerator;
@@ -42,6 +46,7 @@ export class VisRegTester {
         this.runComparer = runComparer;
         this.projects = projects;
         this.events = events;
+        this.filesystem = filesystem;
     }
 
     public runEvents(): EventBus<RunEventMap> {
@@ -170,7 +175,8 @@ export class VisRegTester {
             return undefined;
         }
 
-        const needsComparison = run.comparisons.length === 0
+        const awaitingStoredBaseline = run.comparisons.length === 0 && run.baselineRunId !== undefined;
+        const needsComparison = awaitingStoredBaseline
             || run.comparisons.some((comparison) => comparison.message?.includes('dimensions must match'));
 
         if (
@@ -205,6 +211,47 @@ export class VisRegTester {
         }
 
         await this.idStorage.set(`${run.urlId}_current`, run.id);
+    }
+
+    public async deleteRun(runId: string): Promise<void> {
+        const run = await this.readRun(runId);
+
+        if (!run) {
+            throw new RunError('That run could not be found.', 404);
+        }
+
+        if (await this.isApproved(run)) {
+            throw new RunError('The approved baseline cannot be deleted.', 409);
+        }
+
+        if (run.status === 'queued' || run.status === 'running') {
+            throw new RunError('A run that is still executing cannot be deleted.', 409);
+        }
+
+        const keys = await this.runStorage.keys();
+
+        for (const key of keys) {
+            if (key === run.id) {
+                continue;
+            }
+
+            const other = await this.readRun(key);
+
+            if (other?.baselineRunId !== run.id) {
+                continue;
+            }
+
+            await this.save(other, { baselineRunId: undefined, comparisons: [] });
+            await this.filesystem.remove(`diffs/${other.id}`);
+        }
+
+        await this.runStorage.delete(run.id);
+        await this.filesystem.remove(`runs/run-${run.id}`);
+        await this.filesystem.remove(`diffs/${run.id}`);
+
+        if (await this.idStorage.get(`${run.urlId}_last`) === run.id) {
+            await this.idStorage.delete(`${run.urlId}_last`);
+        }
     }
 
     private parseUrl(value: string): URL {
